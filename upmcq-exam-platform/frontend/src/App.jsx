@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
 
 import Home from './pages/Home';
+import StudentHome from './pages/StudentHome'; // স্টুডেন্ট পোর্টাল ইমপোর্ট করা হলো
 import TeacherLogin from './pages/teacher/TeacherLogin';
 import TeacherRegister from './pages/teacher/TeacherRegister';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -23,6 +24,9 @@ export default function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
+        
+        {/* ---------- Student পোর্টাল (সব লাইভ পরীক্ষার তালিকা) ---------- */}
+        <Route path="/exams" element={<StudentHome />} />
 
         {/* ---------- Teacher রুট ---------- */}
         <Route path="/teacher/login" element={<TeacherLogin />} />
