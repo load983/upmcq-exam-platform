@@ -5,14 +5,18 @@ const upload = require('../middleware/upload');
 const ctrl = require('../controllers/examController');
 
 // ==========================================
-// ১. পাবলিক রুট (Student join পেজ - No Auth Required)
+// ১. পাবলিক রুটস (No Auth Required)
 // ==========================================
+// নির্দিষ্ট কোড দিয়ে পরীক্ষার তথ্য দেখা (Join পেজ)
 router.get('/public/:code', ctrl.getExamByCode);
 
+// পাবলিক: সব পাবলিশড পরীক্ষার তালিকা (Student Portal-এর জন্য)
+router.get('/public-list', ctrl.getPublicExams);
+
 // ==========================================
-// ২. অটেনটিকেশন ও অথরাইজেশন মিডলওয়্যার
+// ২. অটেনটিকেশন ও অথরাইজেশন মিডলওয়্যার
 // ==========================================
-// CORS Preflight (OPTIONS) রিকোয়েস্ট যাতে Auth মিডলওয়্যারে আটকে না যায়
+// CORS Preflight (OPTIONS) রিকোয়েস্ট যাতে Auth মিডলওয়্যারে আটকে না যায়
 router.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
@@ -25,7 +29,7 @@ router.use(protect, authorize('teacher'));
 
 // ==========================================
 // ৩. স্পেসিফিক রুটসমূহ (Static & Specific Paths)
-// (Dynamic `/:id` এর আগে রাখা হয়েছে যাতে Route Conflict না হয়)
+// (Dynamic `/:id` এর আগে রাখা হয়েছে যাতে Route Conflict না হয়)
 // ==========================================
 router.post('/upload', upload.single('pdf'), ctrl.uploadExamPdf);
 router.get('/', ctrl.getMyExams);
