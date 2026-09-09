@@ -1,20 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import axiosClient from '../api/axiosClient';
 
 export default function StudentHome() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ব্যাকএন্ডের মূল URL (Environment Variable না থাকলে ডিফল্ট Vercel ব্যাকএন্ড URL কাজ করবে)
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://upmcq-exam-platform.vercel.app';
-
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/exams/public-list`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Network response was not ok');
-        return res.json();
-      })
-      .then((data) => {
+    // axiosClient ব্যাকএন্ডের Base URL স্বয়ংক্রিয়ভাবে হ্যান্ডেল করবে
+    axiosClient
+      .get('/exams/public-list')
+      .then(({ data }) => {
         setExams(Array.isArray(data) ? data : []);
         setLoading(false);
       })
@@ -23,7 +19,7 @@ export default function StudentHome() {
         setExams([]);
         setLoading(false);
       });
-  }, [API_BASE_URL]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 md:p-8 font-sans">
