@@ -1,7 +1,7 @@
 // ================== controllers/examController.js ==================
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto'); // 💡 nanoid-এর ESM কনফ্লিক্ট এড়াতে Node.js বিল্ট-ইন crypto
+const crypto = require('crypto'); // nanoid-এর ESM কনফ্লিক্ট এড়াতে Node.js বিল্ট-ইন crypto
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const Attempt = require('../models/Attempt');
@@ -29,7 +29,7 @@ exports.uploadExamPdf = async (req, res) => {
 
     const title = req.body.title || req.file.originalname.replace(/\.pdf$/i, '');
     
-    // PDF থেকে প্রশ্ন পার্স করা (File path অথবা Buffer উভয়ই সাপোর্ট করবে)
+    // PDF থেকে প্রশ্ন পার্স করা (File path অথবা Buffer উভয়ই সাপোর্ট করবে)
     const pdfSource = req.file.path || req.file.buffer;
     const parsedQuestions = await extractQuestionsFromPdf(pdfSource);
 
@@ -62,7 +62,7 @@ exports.uploadExamPdf = async (req, res) => {
     res.status(201).json({ exam, questionCount: questionDocs.length });
   } catch (err) {
     if (req.file?.path) safeDeleteFile(req.file.path);
-    res.status(500).json({ message: err.message || 'PDF আপলোড করতে সমস্যা হয়েছে' });
+    res.status(500).json({ message: err.message || 'PDF আপলোড করতে সমস্যা হয়েছে' });
   }
 };
 
