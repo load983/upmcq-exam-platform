@@ -1,8 +1,8 @@
 // ================== pages/teacher/TeacherDashboard.jsx ==================
-import React from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { fetchMyExams, deleteExam } from '../../features/exam/examSlice';
 
 const statusColor = {
@@ -16,9 +16,22 @@ export default function TeacherDashboard() {
   // ✅ ঠিক করা হলো: examSlice এর initialState এ ভ্যারিয়েবলের নাম "exams", "myExams" না
   const { exams: examList, loading, error } = useSelector((s) => s.exam);
   const { user } = useSelector((s) => s.auth);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // ✅ এখনো একটা নিরাপত্তা ফলব্যাক, যদি কখনো undefined হয়ে যায়
   const exams = Array.isArray(examList) ? examList : [];
+
+  // 🔍 সার্চ টার্ম অনুযায়ী পরীক্ষা ফিল্টার করা (টাইটেল ও স্ট্যাটাস দুটোতেই খোঁজা হয়)
+  const filteredExams = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return exams;
+    return exams.filter(
+      (exam) =>
+        exam.title?.toLowerCase().includes(term) ||
+        exam.status?.toLowerCase().includes(term) ||
+        exam.examCode?.toLowerCase().includes(term)
+    );
+  }, [exams, searchTerm]);
 
   useEffect(() => {
     dispatch(fetchMyExams());
@@ -45,15 +58,28 @@ export default function TeacherDashboard() {
         </Link>
       </div>
 
+      {/* 🔍 সার্চবার */}
+      <div className="mb-6">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="পরীক্ষার নাম, স্ট্যাটাস বা কোড দিয়ে খুঁজুন..."
+          className="w-full sm:w-96 px-4 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+      </div>
+
       {loading ? (
         <p className="text-gray-500 dark:text-gray-400">লোড হচ্ছে...</p>
       ) : error ? (
         <p className="text-red-500">পরীক্ষা লোড করতে সমস্যা হয়েছে: {String(error)}</p>
       ) : exams.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400">এখনো কোনো পরীক্ষা তৈরি করোনি।</p>
+      ) : filteredExams.length === 0 ? (
+        <p className="text-gray-500 dark:text-gray-400">"{searchTerm}" এর সাথে মিলে এমন কোনো পরীক্ষা পাওয়া যায়নি।</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {exams.map((exam) => (
+          {filteredExams.map((exam) => (
             <div
               key={exam._id}
               className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border dark:border-gray-700"
