@@ -1,8 +1,24 @@
+/* ১. Google Fonts থেকে বাংলা ফন্ট ইমপোর্ট */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* গ্লোবাল কাস্টম স্টাইল */
-body {
-  font-family: 'Hind Siliguri', 'Segoe UI', sans-serif; /* বাংলা ফন্ট ফ্রেন্ডলি */
+/* ২. গ্লোবাল ফন্ট এবং টেক্সট রেন্ডারিং সেটিং */
+@layer base {
+  html, body {
+    font-family: 'Noto Sans Bengali', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    
+    /* ব্রাউজারে যুক্তবর্ণ ও ফন্ট ডিসপ্লে সমস্যা সমাধানের জন্য */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "liga" 1, "calt" 1;
+  }
+}
+
+/* ৩. ইনপুট ও বাটনগুলোর জন্য ফন্ট ডিফাইন */
+input, button, textarea, select {
+  font-family: 'Noto Sans Bengali', sans-serif;
 }
