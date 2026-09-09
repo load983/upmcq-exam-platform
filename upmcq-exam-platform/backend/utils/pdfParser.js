@@ -1,25 +1,25 @@
 // ================== utils/pdfParser.js ==================
-// PDF ফাইল থেকে টেক্সট বের করে MCQ প্রশ্ন-উত্তর পার্স করার ফাংশন।
-// এটা দুইটা ফরম্যাট সাপোর্ট করে:
-//
-// ফরম্যাট ১ (সাধারণ):
-//   1. প্রশ্ন লেখা?
-//   A. অপশন এক
-//   B. অপশন দুই
-//   Answer: A
-//
-// ফরম্যাট ২ (প্রশ্নব্যাংক স্টাইল, উত্তর শেষে আলাদা টেবিলে):
-//   01. "প্রশ্ন লেখা?"
-//   (a) অপশন এক        (b) অপশন দুই
-//   (c) অপশন তিন        (d) অপশন চার
-//   ...
-//   Answer Key
-//   01 (c) 02 (b) 03 (a) ...
+// PDF ফাইল থেকে বাংলা ও ইংরেজি টেক্সট বের করে MCQ পার্স করার সমাধান।
+
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
 
+/**
+ * UTF-8 টেক্সট ক্লিন এবং নরমালাইজ করার ফাংশন
+ */
+function cleanText(str) {
+  if (!str) return '';
+  return str
+    .replace(/\r/g, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // জিরো-উইডথ স্পেস দূর করা
+    .replace(/\s+/g, ' ') // একাধিক স্পেস একসাথে থাকলে একটি করা
+    .trim();
+}
+
 async function extractQuestionsFromPdf(filePath) {
   const dataBuffer = fs.readFileSync(filePath);
+  
+  // UTF-8 এনকোডিং নিশ্চিত করতে pdf-parse এ বিকল্প পার্সার অপশন যুক্ত
   const pdfData = await pdfParse(dataBuffer);
   const rawText = pdfData.text;
 
@@ -36,13 +36,7 @@ function parseMcqText(rawText) {
   return parseTableFormat(rawText);
 }
 
-// ---------- ফরম্যাট ৩: "(a) ... (b) ..." + প্রতি প্রশ্নের নিচেই "Answer: (x) ..." + ব্যাখ্যা প্যারাগ্রাফ ----------
-// উদাহরণ:
-//   01. "I — him for a long time."
-//   (a) know          (b) am knowing
-//   (c) have known    (d) knew
-//   Answer: (c) have known
-//   ব্যাখ্যা: ... (পরের প্রশ্ন নম্বর না আসা পর্যন্ত যা কিছু আসে, সব ব্যাখ্যা হিসেবে ধরা হয়)
+// ---------- ফরম্যাট ৩: "(a) ... (b) ..." + প্রতি প্রশ্নের নিচেই "Answer: (x) ..." + ব্যাখ্যা ----------
 function parseDetailedFormat(rawText) {
   const text = rawText.replace(/\r/g, '');
   const lines = text
@@ -52,7 +46,10 @@ function parseDetailedFormat(rawText) {
 
   const questionStartRegex = /^(\d{1,3})[\.\)]\s*(.+)/;
   const optionPairRegex = /\(([a-dA-D])\)\s*([^()]+?)(?=\s*\([a-dA-D]\)|$)/g;
-  const answerLineRegex = /^Answer\s*[:\-]?\s*\(?([A-Da-d])\)?/i;
+  
+  // উত্তর এবং ব্যাখ্যা খোঁজার জন্য রেগেক্স
+  const answerLineRegex = /^(Answer|উত্তর)\s*[:\-]?\s*\(?([A-Da-d])\)?\s*(.*)/i;
+  const explanationStartRegex = /^(ব্যাখ্যা|Explanation)\s*[:\-]?\s*(.*)/i;
 
   const rawQuestions = [];
   let current = null;
@@ -65,14 +62,15 @@ function parseDetailedFormat(rawText) {
   for (const line of lines) {
     const qMatch = line.match(questionStartRegex);
     const aMatch = line.match(answerLineRegex);
+    const expMatch = line.match(explanationStartRegex);
     const hasOptionPattern = /\([a-dA-D]\)\s*\S/.test(line);
 
-    // নতুন প্রশ্ন শুরু (তবে "Answer:" লাইনকে ভুলে নতুন প্রশ্ন ধরা যাবে না)
-    if (qMatch && !aMatch) {
+    // নতুন প্রশ্ন শুরু
+    if (qMatch && !aMatch && !expMatch) {
       pushCurrent();
       current = {
         num: parseInt(qMatch[1], 10),
-        questionText: qMatch[2].trim().replace(/^"|"$/g, ''),
+        questionText: cleanText(qMatch[2].replace(/^"|"$/g, '')),
         optionsMap: {},
         explanationLines: [],
       };
@@ -82,33 +80,48 @@ function parseDetailedFormat(rawText) {
 
     if (!current) continue;
 
-    // "Answer: (x) ..." লাইন পাওয়া মাত্র এখন থেকে ব্যাখ্যা-ফেজ শুরু
+    // "Answer:" লাইন পাওয়া গেলে
     if (aMatch && phase !== 'explanation') {
-      current.correctLetter = aMatch[1].toLowerCase();
+      current.correctLetter = aMatch[2].toLowerCase();
       phase = 'explanation';
+      
+      // Answer এর লাইনে যদি ব্যাখ্যার অংশ থাকে
+      if (aMatch[3] && aMatch[3].trim().length > 0) {
+        const extraText = cleanText(aMatch[3].replace(/^(ব্যাখ্যা|Explanation)\s*[:\-]?/i, ''));
+        if (extraText) current.explanationLines.push(extraText);
+      }
       continue;
     }
 
-    // ব্যাখ্যা-ফেজে থাকলে, পরের প্রশ্ন না আসা পর্যন্ত সবকিছু ব্যাখ্যা হিসেবে জমা হবে
-    // (ব্যাখ্যার ভিতরে "(c)" এর মতো রেফারেন্স থাকলেও সেটা অপশন হিসেবে ভুল করে ধরা হবে না)
+    // আলাদা "ব্যাখ্যা:" লেখা থাকলে
+    if (expMatch && phase !== 'explanation') {
+      phase = 'explanation';
+      if (expMatch[2]) current.explanationLines.push(cleanText(expMatch[2]));
+      continue;
+    }
+
+    // ব্যাখ্যা ফেজ
     if (phase === 'explanation') {
-      current.explanationLines.push(line);
+      current.explanationLines.push(cleanText(line));
       continue;
     }
 
+    // অপশন ফেজ
     if (hasOptionPattern) {
       let m;
       optionPairRegex.lastIndex = 0;
       while ((m = optionPairRegex.exec(line)) !== null) {
         const letter = m[1].toLowerCase();
-        if (!current.optionsMap[letter]) current.optionsMap[letter] = m[2].trim();
+        if (!current.optionsMap[letter]) {
+          current.optionsMap[letter] = cleanText(m[2]);
+        }
       }
       phase = 'options';
       continue;
     }
 
     if (phase === 'question') {
-      current.questionText += ' ' + line;
+      current.questionText = cleanText(current.questionText + ' ' + line);
     }
   }
   pushCurrent();
@@ -123,7 +136,7 @@ function parseDetailedFormat(rawText) {
     const correctOptionIndex = presentLetters.indexOf(rq.correctLetter);
     if (correctOptionIndex === -1) continue;
 
-    const explanation = rq.explanationLines.join(' ').trim();
+    const explanation = cleanText(rq.explanationLines.join(' '));
 
     questions.push({
       questionText: rq.questionText,
@@ -136,7 +149,7 @@ function parseDetailedFormat(rawText) {
   return questions.map((q, idx) => ({ ...q, order: idx }));
 }
 
-// ---------- ফরম্যাট ১: প্রতি প্রশ্নের নিচে "Answer: X" ----------
+// ---------- ফরম্যাট ১: সাধারণ ফরম্যাট ----------
 function parseSimpleFormat(rawText) {
   const lines = rawText
     .split(/\r?\n/)
@@ -148,7 +161,7 @@ function parseSimpleFormat(rawText) {
 
   const questionStartRegex = /^(\d+)[\.\)]\s*(.+)/;
   const optionRegex = /^([A-Da-d])[\.\)]\s*(.+)/;
-  const answerRegex = /^Answer\s*[:\-]\s*([A-Da-d])/i;
+  const answerRegex = /^(Answer|উত্তর)\s*[:\-]\s*([A-Da-d])/i;
 
   for (const line of lines) {
     const qMatch = line.match(questionStartRegex);
@@ -159,14 +172,14 @@ function parseSimpleFormat(rawText) {
       if (current && current.options.length >= 2 && current.correctOptionIndex !== null) {
         questions.push(current);
       }
-      current = { questionText: qMatch[2].trim(), options: [], correctOptionIndex: null };
+      current = { questionText: cleanText(qMatch[2]), options: [], correctOptionIndex: null };
     } else if (oMatch && current) {
-      current.options.push(oMatch[2].trim());
+      current.options.push(cleanText(oMatch[2]));
     } else if (aMatch && current) {
-      const letter = aMatch[1].toUpperCase();
+      const letter = aMatch[2].toUpperCase();
       current.correctOptionIndex = letter.charCodeAt(0) - 'A'.charCodeAt(0);
     } else if (current && current.options.length === 0 && !aMatch) {
-      current.questionText += ' ' + line;
+      current.questionText = cleanText(current.questionText + ' ' + line);
     }
   }
   if (current && current.options.length >= 2 && current.correctOptionIndex !== null) {
@@ -176,11 +189,11 @@ function parseSimpleFormat(rawText) {
   return questions.map((q, idx) => ({ ...q, order: idx }));
 }
 
-// ---------- ফরম্যাট ২: "(a) ... (b) ..." + শেষে Answer Key টেবিল ----------
+// ---------- ফরম্যাট ২: Answer Key টেবিল ----------
 function parseTableFormat(rawText) {
   const text = rawText.replace(/\r/g, '');
 
-  const answerKeyMatch = text.match(/answer\s*key/i);
+  const answerKeyMatch = text.match(/(answer\s*key|উত্তরপত্র)/i);
   const questionsText = answerKeyMatch ? text.slice(0, answerKeyMatch.index) : text;
   const answerText = answerKeyMatch ? text.slice(answerKeyMatch.index) : '';
 
@@ -203,7 +216,7 @@ function parseTableFormat(rawText) {
       if (current) rawQuestions.push(current);
       current = {
         num: parseInt(qMatch[1], 10),
-        questionText: qMatch[2].trim().replace(/^"|"$/g, ''),
+        questionText: cleanText(qMatch[2].replace(/^"|"$/g, '')),
         optionsMap: {},
       };
     } else if (hasOptions && current) {
@@ -211,10 +224,10 @@ function parseTableFormat(rawText) {
       optionPairRegex.lastIndex = 0;
       while ((m = optionPairRegex.exec(line)) !== null) {
         const letter = m[1].toLowerCase();
-        current.optionsMap[letter] = m[2].trim();
+        current.optionsMap[letter] = cleanText(m[2]);
       }
     } else if (current && Object.keys(current.optionsMap).length === 0) {
-      current.questionText += ' ' + line;
+      current.questionText = cleanText(current.questionText + ' ' + line);
     }
   }
   if (current) rawQuestions.push(current);
