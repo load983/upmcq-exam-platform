@@ -377,3 +377,16 @@ exports.removeResource = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// ---------- ১২. পাবলিক: সব পাবলিশ হওয়া পরীক্ষার তালিকা (Student Portal-এর জন্য) ----------
+exports.getPublicExams = async (req, res) => {
+  try {
+    const exams = await Exam.find({ status: 'published' })
+      .select('title examCode createdAt settings.totalTimeMinutes')
+      .sort({ createdAt: -1 });
+
+    res.json(exams);
+  } catch (err) {
+    res.status(500).json({ message: 'পরীক্ষার তালিকা আনতে সমস্যা হয়েছে' });
+  }
+};
