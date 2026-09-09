@@ -269,7 +269,7 @@ exports.getExamByCode = async (req, res) => {
     }
 
     const schedule = exam.settings?.schedule;
-    const isScheduleEnabled = schedule?.enabled !== undefined ? schedule.enabled : true;
+    const isScheduleEnabled = schedule?.enabled !== undefined ? schedule.enabled : false;
 
     if (schedule && isScheduleEnabled) {
       const now = new Date();
@@ -386,29 +386,32 @@ exports.getPublicExams = async (req, res) => {
   try {
     const now = new Date();
 
-    const exams = await Exam.find({
-      status: 'published',
-      $and: [
-        {
-          $or: [
-            { 'settings.schedule.startAt': { $exists: false } },
-            { 'settings.schedule.startAt': null },
-            { 'settings.schedule.startAt': { $lte: now } }
-          ]
-        },
-        {
-          $or: [
-            { 'settings.schedule.endAt': { $exists: false } },
-            { 'settings.schedule.endAt': null },
-            { 'settings.schedule.endAt': { $gte: now } }
-          ]
-        }
-      ]
-    })
+    // ১. সব published পরীক্ষা তুলে নিয়ে আসা
+    const publishedExams = await Exam.find({ status: 'published' })
       .select('title examCode createdAt settings.totalTimeMinutes settings.schedule')
       .sort({ createdAt: -1 });
 
-    res.json(exams);
+    // ২. JS ফিল্টারের মাধ্যমে শডিউল অ্যাক্টিভ আছে কিনা যাচাই করে ফিল্টার করা
+    const validExams = publishedExams.filter((exam) => {
+      const schedule = exam.settings?.schedule;
+
+      // যদি শডিউল অপশন ডিসেবলড (false) থাকে অথবা সেট করাই না থাকে, তাহলে পোর্টালে সরাসরি দেখাবে
+      if (!schedule || schedule.enabled === false) {
+        return true;
+      }
+
+      // শডিউল অন (enabled: true) থাকলে সময় চেক করা হবে
+      if (schedule.startAt && now < new Date(schedule.startAt)) {
+        return false; // পরীক্ষা শুরু হতে সময় বাকি
+      }
+      if (schedule.endAt && now > new Date(schedule.endAt)) {
+        return false; // পরীক্ষার মেয়াদ শেষ
+      }
+
+      return true;
+    });
+
+    res.json(validExams);
   } catch (err) {
     res.status(500).json({ message: 'পরীক্ষার তালিকা আনতে সমস্যা হয়েছে', error: err.message });
   }
