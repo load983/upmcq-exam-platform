@@ -386,9 +386,10 @@ exports.getPublicExams = async (req, res) => {
   try {
     const now = new Date();
 
-    // ১. সব published পরীক্ষা তুলে নিয়ে আসা
+    // ১. সব published পরীক্ষা তুলে নিয়ে আসা
     const publishedExams = await Exam.find({ status: 'published' })
       .select('title examCode createdAt settings.totalTimeMinutes settings.schedule')
+      .lean()
       .sort({ createdAt: -1 });
 
     // ২. JS ফিল্টারের মাধ্যমে শডিউল অ্যাক্টিভ আছে কিনা যাচাই করে ফিল্টার করা
@@ -400,18 +401,29 @@ exports.getPublicExams = async (req, res) => {
         return true;
       }
 
-      // শডিউল অন (enabled: true) থাকলে সময় চেক করা হবে
+      // শডিউল অন (enabled: true) থাকলে সময় চেক করা হবে
       if (schedule.startAt && now < new Date(schedule.startAt)) {
-        return false; // পরীক্ষা শুরু হতে সময় বাকি
+        return false; // পরীক্ষা শুরু হতে সময় বাকি
       }
       if (schedule.endAt && now > new Date(schedule.endAt)) {
-        return false; // পরীক্ষার মেয়াদ শেষ
+        return false; // পরীক্ষার মেয়াদ শেষ
       }
 
       return true;
     });
 
-    res.json(validExams);
+    // ৩. প্রতিটি এক্সামের জন্য মোট Attempt (অংশগ্রহণ সংখ্যা) গণনা করা
+    const examsWithAttempts = await Promise.all(
+      validExams.map(async (exam) => {
+        const attemptCount = await Attempt.countDocuments({ exam: exam._id });
+        return {
+          ...exam,
+          attemptCount,
+        };
+      })
+    );
+
+    res.json(examsWithAttempts);
   } catch (err) {
     res.status(500).json({ message: 'পরীক্ষার তালিকা আনতে সমস্যা হয়েছে', error: err.message });
   }
