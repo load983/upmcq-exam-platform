@@ -1,13 +1,16 @@
 /** @type {import('tailwindcss').Config} */
-export default {
-  content: ['./index.html', './src/**/*.{js,jsx}'],
-  darkMode: 'class', // Dark Mode টগল করার জন্য 'class' স্ট্র্যাটেজি ব্যবহার হচ্ছে
+module.exports = {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
-      colors: {
-        primary: {
-          50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
-        },
+      fontFamily: {
+        // 'font-sans' এর ডিফল্ট ফন্ট হিসেবে বাংলা ফন্ট যুক্ত করা হচ্ছে
+        sans: ['"Noto Sans Bengali"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // কাস্টম 'font-bangla' ক্লাস ব্যবহারের জন্য
+        bangla: ['"Noto Sans Bengali"', 'sans-serif'],
       },
     },
   },
