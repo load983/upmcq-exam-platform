@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function StudentHome() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/exams/public/list')
+    // API endpoint updated to match routes (/public-list)
+    fetch('/api/exams/public-list')
       .then((res) => res.json())
       .then((data) => {
         setExams(Array.isArray(data) ? data : []);
@@ -25,7 +27,7 @@ export default function StudentHome() {
             🎓 অনলাইন পরীক্ষা পোর্টাল
           </h1>
           <p className="text-slate-400">
-            চলতি পরীক্ষাগুলোর তালিকা নিচে দেওয়া হলো। সরাসরি অংশগ্রহণ করতে "পরীক্ষা দাও" বাটনে ক্লিক করো।
+            চলতি পরীক্ষাগুলোর তালিকা নিচে দেওয়া হলো। সরাসরি অংশগ্রহণ করতে "পরীক্ষা দাও" বাটনে ক্লিক করো।
           </p>
         </header>
 
@@ -37,32 +39,26 @@ export default function StudentHome() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {exams.map((exam) => {
-              const examUrl = `https://upmcq-exam-platform.vercel.app/join/${exam.examCode}`;
-
-              return (
-                <div
-                  key={exam._id}
-                  className="bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-lg flex flex-col justify-between hover:border-blue-500 transition-colors"
-                >
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-100 mb-2">{exam.title}</h2>
-                    <p className="text-sm text-slate-400 mb-4">
-                      ⏱️ সময়: {exam.settings?.totalTimeMinutes ? `${exam.settings.totalTimeMinutes} মিনিট` : 'নির্দিষ্ট সময়সীমা নেই'}
-                    </p>
-                  </div>
-
-                  <a
-                    href={examUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block text-center w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors"
-                  >
-                    পরীক্ষা দাও 🚀
-                  </a>
+            {exams.map((exam) => (
+              <div
+                key={exam._id}
+                className="bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-lg flex flex-col justify-between hover:border-blue-500 transition-colors"
+              >
+                <div>
+                  <h2 className="text-xl font-bold text-slate-100 mb-2">{exam.title}</h2>
+                  <p className="text-sm text-slate-400 mb-4">
+                    ⏱️ সময়: {exam.settings?.totalTimeMinutes ? `${exam.settings.totalTimeMinutes} মিনিট` : 'নির্দিষ্ট সময়সীমা নেই'}
+                  </p>
                 </div>
-              );
-            })}
+
+                <Link
+                  to={`/join/${exam.examCode}`}
+                  className="block text-center w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors"
+                >
+                  পরীক্ষা দাও 🚀
+                </Link>
+              </div>
+            ))}
           </div>
         )}
       </div>
