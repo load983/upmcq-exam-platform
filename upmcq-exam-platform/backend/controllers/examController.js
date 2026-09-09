@@ -269,7 +269,9 @@ exports.getExamByCode = async (req, res) => {
     }
 
     const schedule = exam.settings?.schedule;
-    if (schedule?.enabled) {
+    const isScheduleEnabled = schedule?.enabled !== undefined ? schedule.enabled : true;
+
+    if (schedule && isScheduleEnabled) {
       const now = new Date();
       if (schedule.startAt && now < new Date(schedule.startAt)) {
         return res.status(400).json({ message: 'পরীক্ষা এখনো শুরু হয়নি' });
@@ -284,6 +286,7 @@ exports.getExamByCode = async (req, res) => {
       examCode: exam.examCode,
       requiresAccessCode: !!exam.accessCode,
       totalTimeMinutes: exam.settings?.totalTimeMinutes || 0,
+      settings: exam.settings,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -378,15 +381,35 @@ exports.removeResource = async (req, res) => {
   }
 };
 
-// ---------- ১২. পাবলিক: সব পাবলিশ হওয়া পরীক্ষার তালিকা (Student Portal-এর জন্য) ----------
+// ---------- ১২. পাবলিক: সব পাবলিশ হওয়া পরীক্ষার তালিকা (Student Portal-এর জন্য) ----------
 exports.getPublicExams = async (req, res) => {
   try {
-    const exams = await Exam.find({ status: 'published' })
-      .select('title examCode createdAt settings.totalTimeMinutes')
+    const now = new Date();
+
+    const exams = await Exam.find({
+      status: 'published',
+      $and: [
+        {
+          $or: [
+            { 'settings.schedule.startAt': { $exists: false } },
+            { 'settings.schedule.startAt': null },
+            { 'settings.schedule.startAt': { $lte: now } }
+          ]
+        },
+        {
+          $or: [
+            { 'settings.schedule.endAt': { $exists: false } },
+            { 'settings.schedule.endAt': null },
+            { 'settings.schedule.endAt': { $gte: now } }
+          ]
+        }
+      ]
+    })
+      .select('title examCode createdAt settings.totalTimeMinutes settings.schedule')
       .sort({ createdAt: -1 });
 
     res.json(exams);
   } catch (err) {
-    res.status(500).json({ message: 'পরীক্ষার তালিকা আনতে সমস্যা হয়েছে' });
+    res.status(500).json({ message: 'পরীক্ষার তালিকা আনতে সমস্যা হয়েছে', error: err.message });
   }
 };
