@@ -29,7 +29,111 @@ async function extractQuestionsFromPdf(filePath) {
 function parseMcqText(rawText) {
   const simple = parseSimpleFormat(rawText);
   if (simple.length > 0) return simple;
+
+  const detailed = parseDetailedFormat(rawText);
+  if (detailed.length > 0) return detailed;
+
   return parseTableFormat(rawText);
+}
+
+// ---------- ফরম্যাট ৩: "(a) ... (b) ..." + প্রতি প্রশ্নের নিচেই "Answer: (x) ..." + ব্যাখ্যা প্যারাগ্রাফ ----------
+// উদাহরণ:
+//   01. "I — him for a long time."
+//   (a) know          (b) am knowing
+//   (c) have known    (d) knew
+//   Answer: (c) have known
+//   ব্যাখ্যা: ... (পরের প্রশ্ন নম্বর না আসা পর্যন্ত যা কিছু আসে, সব ব্যাখ্যা হিসেবে ধরা হয়)
+function parseDetailedFormat(rawText) {
+  const text = rawText.replace(/\r/g, '');
+  const lines = text
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !/^page\s+\d+\s+of\s+\d+$/i.test(l));
+
+  const questionStartRegex = /^(\d{1,3})[\.\)]\s*(.+)/;
+  const optionPairRegex = /\(([a-dA-D])\)\s*([^()]+?)(?=\s*\([a-dA-D]\)|$)/g;
+  const answerLineRegex = /^Answer\s*[:\-]?\s*\(?([A-Da-d])\)?/i;
+
+  const rawQuestions = [];
+  let current = null;
+  let phase = null; // 'question' | 'options' | 'explanation'
+
+  const pushCurrent = () => {
+    if (current) rawQuestions.push(current);
+  };
+
+  for (const line of lines) {
+    const qMatch = line.match(questionStartRegex);
+    const aMatch = line.match(answerLineRegex);
+    const hasOptionPattern = /\([a-dA-D]\)\s*\S/.test(line);
+
+    // নতুন প্রশ্ন শুরু (তবে "Answer:" লাইনকে ভুলে নতুন প্রশ্ন ধরা যাবে না)
+    if (qMatch && !aMatch) {
+      pushCurrent();
+      current = {
+        num: parseInt(qMatch[1], 10),
+        questionText: qMatch[2].trim().replace(/^"|"$/g, ''),
+        optionsMap: {},
+        explanationLines: [],
+      };
+      phase = 'question';
+      continue;
+    }
+
+    if (!current) continue;
+
+    // "Answer: (x) ..." লাইন পাওয়া মাত্র এখন থেকে ব্যাখ্যা-ফেজ শুরু
+    if (aMatch && phase !== 'explanation') {
+      current.correctLetter = aMatch[1].toLowerCase();
+      phase = 'explanation';
+      continue;
+    }
+
+    // ব্যাখ্যা-ফেজে থাকলে, পরের প্রশ্ন না আসা পর্যন্ত সবকিছু ব্যাখ্যা হিসেবে জমা হবে
+    // (ব্যাখ্যার ভিতরে "(c)" এর মতো রেফারেন্স থাকলেও সেটা অপশন হিসেবে ভুল করে ধরা হবে না)
+    if (phase === 'explanation') {
+      current.explanationLines.push(line);
+      continue;
+    }
+
+    if (hasOptionPattern) {
+      let m;
+      optionPairRegex.lastIndex = 0;
+      while ((m = optionPairRegex.exec(line)) !== null) {
+        const letter = m[1].toLowerCase();
+        if (!current.optionsMap[letter]) current.optionsMap[letter] = m[2].trim();
+      }
+      phase = 'options';
+      continue;
+    }
+
+    if (phase === 'question') {
+      current.questionText += ' ' + line;
+    }
+  }
+  pushCurrent();
+
+  const letters = ['a', 'b', 'c', 'd'];
+  const questions = [];
+
+  for (const rq of rawQuestions) {
+    const presentLetters = letters.filter((l) => rq.optionsMap[l]);
+    if (presentLetters.length < 2 || !rq.correctLetter) continue;
+
+    const correctOptionIndex = presentLetters.indexOf(rq.correctLetter);
+    if (correctOptionIndex === -1) continue;
+
+    const explanation = rq.explanationLines.join(' ').trim();
+
+    questions.push({
+      questionText: rq.questionText,
+      options: presentLetters.map((l) => rq.optionsMap[l]),
+      correctOptionIndex,
+      explanation: explanation || undefined,
+    });
+  }
+
+  return questions.map((q, idx) => ({ ...q, order: idx }));
 }
 
 // ---------- ফরম্যাট ১: প্রতি প্রশ্নের নিচে "Answer: X" ----------
