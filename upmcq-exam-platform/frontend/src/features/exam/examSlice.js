@@ -9,17 +9,17 @@ export const fetchExams = createAsyncThunk('exam/fetchExams', async (_, { reject
     const r = await axios.get(API_URL);
     return r.data;
   } catch (e) {
-    return rejectWithValue(e.response?.data?.message || 'Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to fetch exams');
   }
 });
 
 export const fetchMyExams = createAsyncThunk('exam/fetchMyExams', async (_, { rejectWithValue }) => {
   try {
-    // ব্যাকএন্ডে GET /api/exams (getMyExams) রুটই লগইন করা টিচারের নিজের এক্সাম লিস্ট দেয়
+    // ব্যাকএন্ডে GET /api/exams (getMyExams) রুটই লগইন করা টিচারের নিজের এক্সাম লিস্ট দেয়
     const r = await axios.get(API_URL);
     return r.data;
   } catch (e) {
-    return rejectWithValue(e.response?.data?.message || 'Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to fetch my exams');
   }
 });
 
@@ -28,7 +28,7 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
     const r = await axios.get(`${API_URL}/${id}`);
     return r.data;
   } catch (e) {
-    return rejectWithValue(e.response?.data?.message || 'Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to fetch exam details');
   }
 });
 
@@ -47,11 +47,10 @@ export const createExam = createAsyncThunk('exam/createExam', async (data, { rej
     const r = await axios.post(API_URL, data);
     return r.data;
   } catch (e) {
-    return rejectWithValue(e.response?.data?.message || 'Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to create exam');
   }
 });
 
-// ⚠️ আপলোড থাংক সংশোধন (Content-Type ম্যানুয়ালি দেওয়া বাদ দেওয়া হয়েছে)
 export const uploadExamPdf = createAsyncThunk('exam/uploadExamPdf', async (formDataPayload, { rejectWithValue }) => {
   try {
     const r = await axios.post(`${API_URL}/upload`, formDataPayload);
@@ -69,7 +68,7 @@ export const updateExam = createAsyncThunk('exam/updateExam', async ({ id, examD
     const r = await axios.put(`${API_URL}/${id}`, examData);
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to update exam');
   }
 });
 
@@ -78,7 +77,7 @@ export const deleteExam = createAsyncThunk('exam/deleteExam', async (id, { rejec
     await axios.delete(`${API_URL}/${id}`);
     return id;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to delete exam');
   }
 });
 
@@ -87,7 +86,7 @@ export const updateExamSettings = createAsyncThunk('exam/updateExamSettings', as
     const r = await axios.put(`${API_URL}/${id}/settings`, payload);
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to update settings');
   }
 });
 
@@ -96,7 +95,7 @@ export const publishExam = createAsyncThunk('exam/publishExam', async (id, { rej
     const r = await axios.post(`${API_URL}/${id}/publish`);
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to publish exam');
   }
 });
 
@@ -105,7 +104,7 @@ export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({
     const r = await axios.put(`${API_URL}/${id}/resource-link`, { link });
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to set resource link');
   }
 });
 
@@ -114,7 +113,7 @@ export const uploadResourcePdf = createAsyncThunk('exam/uploadResourcePdf', asyn
     const r = await axios.post(`${API_URL}/${id}/resource-pdf`, formData);
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to upload resource PDF');
   }
 });
 
@@ -123,7 +122,7 @@ export const removeResource = createAsyncThunk('exam/removeResource', async (id,
     const r = await axios.delete(`${API_URL}/${id}/resource`);
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to remove resource');
   }
 });
 
@@ -133,7 +132,7 @@ export const addQuestion = createAsyncThunk('exam/addQuestion', async ({ examId,
     const r = await axios.post(`${API_URL}/${examId}/questions`, questionData);
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to add question');
   }
 });
 
@@ -142,7 +141,7 @@ export const updateQuestion = createAsyncThunk('exam/updateQuestion', async ({ q
     const r = await axios.put(`${API_URL}/questions/${questionId}`, payload);
     return r.data;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to update question');
   }
 });
 
@@ -152,7 +151,7 @@ export const deleteQuestion = createAsyncThunk('exam/deleteQuestion', async (arg
     await axios.delete(`${API_URL}/questions/${qId}`);
     return qId;
   } catch (e) {
-    return rejectWithValue('Failed');
+    return rejectWithValue(e.response?.data?.message || 'Failed to delete question');
   }
 });
 
