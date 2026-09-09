@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* গ্লোবাল কাস্টম স্টাইল */
+body {
+  font-family: 'Hind Siliguri', 'Segoe UI', sans-serif; /* বাংলা ফন্ট ফ্রেন্ডলি */
+}
