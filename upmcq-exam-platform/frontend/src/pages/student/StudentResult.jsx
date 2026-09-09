@@ -92,7 +92,7 @@ export default function StudentResult() {
           </button>
         )}
 
-        <button onClick={() => { dispatch(resetAttempt()); navigate('/'); }} className="text-sm text-gray-500">
+        <button onClick={() => { dispatch(resetAttempt()); window.location.href = 'https://upmcq-exam-platform.vercel.app/exams'; }} className="text-sm text-gray-500">
           হোমে ফিরে যাও
         </button>
       </div>
