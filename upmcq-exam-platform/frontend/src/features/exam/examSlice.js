@@ -84,7 +84,7 @@ export const deleteExam = createAsyncThunk('exam/deleteExam', async (id, { rejec
 
 export const updateExamSettings = createAsyncThunk('exam/updateExamSettings', async ({ id, payload }, { rejectWithValue }) => {
   try {
-    const r = await axios.put(`${API_URL}/${id}`, payload);
+    const r = await axios.put(`${API_URL}/${id}/settings`, payload);
     return r.data;
   } catch (e) {
     return rejectWithValue('Failed');
@@ -102,7 +102,7 @@ export const publishExam = createAsyncThunk('exam/publishExam', async (id, { rej
 
 export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({ id, link }, { rejectWithValue }) => {
   try {
-    const r = await axios.put(`${API_URL}/${id}/resource`, { link });
+    const r = await axios.put(`${API_URL}/${id}/resource-link`, { link });
     return r.data;
   } catch (e) {
     return rejectWithValue('Failed');
@@ -111,7 +111,7 @@ export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({
 
 export const uploadResourcePdf = createAsyncThunk('exam/uploadResourcePdf', async ({ id, formData }, { rejectWithValue }) => {
   try {
-    const r = await axios.post(`${API_URL}/${id}/resource/pdf`, formData);
+    const r = await axios.post(`${API_URL}/${id}/resource-pdf`, formData);
     return r.data;
   } catch (e) {
     return rejectWithValue('Failed');
