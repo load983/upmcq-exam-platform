@@ -230,7 +230,7 @@ exports.downloadResultPdf = async (req, res) => {
     const doc = new PDFDocument({ margin: 40 });
     doc.pipe(res);
 
-    const fontPath = path.join(__dirname, '..', 'fonts', 'NotoSansBengali-Regular.ttf');
+    const fontPath = path.join(__dirname, '..', 'fonts', 'N2otoSansBengali-Regular.ttf');
     if (fs.existsSync(fontPath)) {
       doc.registerFont('Bangla', fontPath);
       doc.font('Bangla');
