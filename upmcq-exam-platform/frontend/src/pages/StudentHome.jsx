@@ -5,19 +5,25 @@ export default function StudentHome() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ব্যাকএন্ডের মূল URL (Environment Variable না থাকলে ডিফল্ট Vercel ব্যাকএন্ড URL কাজ করবে)
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://upmcq-exam-platform.vercel.app';
+
   useEffect(() => {
-    // API endpoint updated to match routes (/public-list)
-    fetch('/api/exams/public-list')
-      .then((res) => res.json())
+    fetch(`${API_BASE_URL}/api/exams/public-list`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
       .then((data) => {
         setExams(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Error fetching exams:', err);
+        setExams([]);
         setLoading(false);
       });
-  }, []);
+  }, [API_BASE_URL]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 md:p-8 font-sans">
@@ -27,7 +33,7 @@ export default function StudentHome() {
             🎓 অনলাইন পরীক্ষা পোর্টাল
           </h1>
           <p className="text-slate-400">
-            চলতি পরীক্ষাগুলোর তালিকা নিচে দেওয়া হলো। সরাসরি অংশগ্রহণ করতে "পরীক্ষা দাও" বাটনে ক্লিক করো।
+            চলতি পরীক্ষাগুলোর তালিকা নিচে দেওয়া হলো। সরাসরি অংশগ্রহণ করতে "পরীক্ষা দাও" বাটনে ক্লিক করো।
           </p>
         </header>
 
@@ -47,7 +53,7 @@ export default function StudentHome() {
                 <div>
                   <h2 className="text-xl font-bold text-slate-100 mb-2">{exam.title}</h2>
                   <p className="text-sm text-slate-400 mb-4">
-                    ⏱️ সময়: {exam.settings?.totalTimeMinutes ? `${exam.settings.totalTimeMinutes} মিনিট` : 'নির্দিষ্ট সময়সীমা নেই'}
+                    ⏱️ সময়: {exam.settings?.totalTimeMinutes ? `${exam.settings.totalTimeMinutes} মিনিট` : 'নির্দিষ্ট সময়সীমা নেই'}
                   </p>
                 </div>
 
