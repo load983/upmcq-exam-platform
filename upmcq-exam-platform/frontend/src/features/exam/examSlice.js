@@ -31,7 +31,6 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
   }
 });
 
-// EXAM CODE দিয়ে পরীক্ষা খোঁজার Async Thunk
 export const fetchExamByCode = createAsyncThunk('exam/fetchExamByCode', async (examCode, { rejectWithValue }) => {
   try {
     const r = await axios.get(`${API_URL}/code/${examCode}`);
@@ -178,12 +177,18 @@ const examSlice = createSlice({
   name: 'exam',
   initialState,
   reducers: {
-    clearCurrentExam: (s) => { s.currentExam = null; s.questions = []; s.shareLink = null; },
-    clearError: (s) => { s.error = null; },
+    clearCurrentExam: (s) => { 
+      s.currentExam = null; 
+      s.questions = []; 
+      s.shareLink = null; 
+    },
+    clearError: (s) => { 
+      s.error = null; 
+    },
   },
   extraReducers: (b) => {
-    b.addCase(fetchExams.fulfilled, (s, a) => { s.exams = a.payload; })
-     .addCase(fetchMyExams.fulfilled, (s, a) => { s.exams = a.payload; })
+    b.addCase(fetchExams.fulfilled, (s, a) => { s.exams = Array.isArray(a.payload) ? a.payload : a.payload.exams || []; })
+     .addCase(fetchMyExams.fulfilled, (s, a) => { s.exams = Array.isArray(a.payload) ? a.payload : a.payload.exams || []; })
      .addCase(fetchExamById.fulfilled, (s, a) => { 
         const ex = a.payload.exam || a.payload.data || a.payload;
         s.currentExam = ex; 
@@ -196,7 +201,10 @@ const examSlice = createSlice({
         s.questions = a.payload.questions || ex?.questions || [];
       })
      .addCase(fetchExamResults.fulfilled, (s, a) => { s.results = a.payload.results || a.payload; })
-     .addCase(createExam.fulfilled, (s, a) => { s.exams.push(a.payload.exam || a.payload); })
+     .addCase(createExam.fulfilled, (s, a) => { 
+        const ex = a.payload.exam || a.payload;
+        if (ex?._id) s.exams.push(ex);
+      })
      .addCase(uploadExamPdf.fulfilled, (s, a) => { 
         const ex = a.payload.exam || a.payload; 
         if (ex?._id) s.exams.push(ex); 
@@ -210,10 +218,14 @@ const examSlice = createSlice({
      .addCase(setResourceLink.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
      .addCase(uploadResourcePdf.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
      .addCase(removeResource.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
-     .addCase(addQuestion.fulfilled, (s, a) => { s.questions.push(a.payload); })
+     .addCase(addQuestion.fulfilled, (s, a) => { 
+        const q = a.payload.question || a.payload;
+        if (q) s.questions.push(q); 
+      })
      .addCase(updateQuestion.fulfilled, (s, a) => { 
-        const i = s.questions.findIndex(q => q._id === a.payload._id); 
-        if (i !== -1) s.questions[i] = a.payload; 
+        const q = a.payload.question || a.payload;
+        const i = s.questions.findIndex(item => item._id === q._id); 
+        if (i !== -1) s.questions[i] = q; 
       })
      .addCase(deleteQuestion.fulfilled, (s, a) => { s.questions = s.questions.filter(q => q._id !== a.payload); })
      .addMatcher(ac => ac.type.endsWith('/pending'), s => { s.loading = true; s.error = null; })
