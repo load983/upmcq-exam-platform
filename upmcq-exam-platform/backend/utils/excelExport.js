@@ -1,7 +1,7 @@
-// ================== utils/excelExport.js ==================
-// রেজাল্ট Excel ফাইলে Export করার হেল্পার ফাংশন (exceljs ব্যবহার করে)
+// backend/utils/excelExport.js
 const ExcelJS = require('exceljs');
 
+// ১. পরীক্ষার রেজাল্ট Excel ফাইলে Export করার ফাংশন
 async function generateResultExcel(exam, attempts) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Results');
@@ -40,4 +40,29 @@ async function generateResultExcel(exam, attempts) {
   return workbook;
 }
 
-module.exports = { generateResultExcel };
+// ২. ক্রিয়েট করা শিক্ষার্থীদের তালিকা Excel ফাইলে Export করার ফাংশন
+async function generateStudentsExcel(students) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Students');
+
+  sheet.columns = [
+    { header: 'নাম', key: 'name', width: 25 },
+    { header: 'রোল', key: 'roll', width: 15 },
+    { header: 'মোবাইল নম্বর', key: 'phone', width: 18 },
+    { header: 'রেজিস্ট্রেশনের সময়', key: 'registeredAt', width: 22 },
+  ];
+
+  students.forEach((s) => {
+    sheet.addRow({
+      name: s.name || '',
+      roll: s.roll || '',
+      phone: s.phone || '',
+      registeredAt: s.createdAt ? new Date(s.createdAt).toLocaleString('bn-BD') : '',
+    });
+  });
+
+  sheet.getRow(1).font = { bold: true };
+  return workbook;
+}
+
+module.exports = { generateResultExcel, generateStudentsExcel };
