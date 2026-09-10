@@ -1,9 +1,10 @@
+// src/pages/student/StudentAuthPage.jsx
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import axiosClient from '../api/axiosClient';
+import axiosClient from '../../api/axiosClient'; // 🛠️ পাথ ঠিক করা হয়েছে (../ এর জায়গায় ../../)
 
-export default function StudentAuth() {
+export default function StudentAuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ name: '', roll: '', phone: '', password: '' });
   const [error, setError] = useState('');
