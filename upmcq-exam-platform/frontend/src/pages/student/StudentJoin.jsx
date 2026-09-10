@@ -32,15 +32,16 @@ const StudentJoin = () => {
     }
   }, [user]);
 
-  // সব সম্ভাব্য প্রপার্টি থেকে আইডি তুলে আনার নিরাপদ লজিক
-  const targetExamId = 
-    currentExam?._id || 
-    currentExam?.id || 
-    currentExam?.examId || 
-    currentExam?.exam?._id;
-
   const handleStartExam = async (e) => {
     if (e) e.preventDefault();
+
+    // সঠিকভাবে আইডি ক্যাচ করার জন্য ফাংশনের ভেতরেই ডিফাইন করা হলো
+    const targetExamId = 
+      currentExam?._id || 
+      currentExam?.id || 
+      currentExam?.examId || 
+      currentExam?.exam?._id ||
+      currentExam?.exam?.id;
 
     if (!targetExamId) {
       alert('পরীক্ষার তথ্য পাওয়া যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন।');
@@ -86,7 +87,6 @@ const StudentJoin = () => {
   if (examLoading) return <div className="p-8 text-center text-white">Loading exam...</div>;
   if (examError) return <div className="p-8 text-center text-red-500">{examError}</div>;
 
-  // সময় সঠিকভাবে দেখানোর ফলব্যাক
   const examDuration =
     currentExam?.settings?.totalTimeMinutes ||
     currentExam?.totalTimeMinutes ||
@@ -102,7 +102,7 @@ const StudentJoin = () => {
         {user && user.role === 'student' ? (
           <div className="text-center space-y-4">
             <div className="bg-slate-700/50 p-4 rounded-lg text-left text-sm space-y-1 border border-slate-600">
-              <p><span className="text-slate-400">পরীক্ষार्थी:</span> <strong className="text-white">{user.name}</strong></p>
+              <p><span className="text-slate-400">পরীক্ষার্থী:</span> <strong className="text-white">{user.name}</strong></p>
               {user.rollNumber && <p><span className="text-slate-400">রোল নম্বর:</span> <strong className="text-white">{user.rollNumber}</strong></p>}
               {user.email && <p><span className="text-slate-400">ইমেইল:</span> <strong className="text-white">{user.email}</strong></p>}
             </div>
