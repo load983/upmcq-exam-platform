@@ -30,9 +30,10 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
   }
 });
 
+// 🛠️ আপডেট: পাবলিক এন্ডপয়েন্ট /public/${code} ব্যবহার করা হয়েছে
 export const fetchExamByCode = createAsyncThunk('exam/fetchExamByCode', async (code, { rejectWithValue }) => {
   try {
-    const r = await axios.get(`${API_URL}/code/${code}`);
+    const r = await axios.get(`${API_URL}/public/${code}`);
     return r.data;
   } catch (e) {
     return rejectWithValue(e.response?.data?.message || 'Exam not found');
