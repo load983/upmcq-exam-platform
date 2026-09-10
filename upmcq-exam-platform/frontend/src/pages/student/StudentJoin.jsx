@@ -83,11 +83,18 @@ const StudentJoin = () => {
 
   const targetExamId = currentExam?._id || currentExam?.id;
 
+  // সব সম্ভাব্য জায়গা থেকে সঠিক টাইম স্ট্রাকচার রিসিভ করার লজিক
+  const examDuration =
+    currentExam?.settings?.totalTimeMinutes ||
+    currentExam?.totalTimeMinutes ||
+    currentExam?.duration ||
+    10;
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
         <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
-        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration || 0} মিনিট</p>
+        <p className="text-center text-slate-400 mb-6">সময়: {examDuration} মিনিট</p>
 
         {user && user.role === 'student' ? (
           <div className="text-center space-y-4">
