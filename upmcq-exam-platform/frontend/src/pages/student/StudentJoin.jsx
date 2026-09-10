@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchExamByCode } from '../../features/exam/examSlice';
+import { fetchExamByCode, clearCurrentExam } from '../../features/exam/examSlice';
 import { startAttempt } from '../../features/attempt/attemptSlice';
 
 const StudentJoin = () => {
@@ -19,6 +19,7 @@ const StudentJoin = () => {
 
   useEffect(() => {
     if (examCode) {
+      dispatch(clearCurrentExam()); // পুরনো এক্সাম ডাটা ফ্ল্যাশ করা
       dispatch(fetchExamByCode(examCode));
     }
   }, [dispatch, examCode]);
@@ -43,8 +44,8 @@ const StudentJoin = () => {
     const rollToUse = user ? (user.rollNumber || 'N/A') : rollNumber;
     const phoneToUse = user ? (user.phone || '') : phone;
 
-    if (!nameToUse || (!user && !rollToUse)) {
-      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
+    if (!nameToUse?.trim() || (!user && !rollToUse?.trim())) {
+      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
       return;
     }
 
@@ -60,9 +61,8 @@ const StudentJoin = () => {
         })
       ).unwrap();
 
-      // backend data format অনুযায়ী attemptId বা _id নিরাপদভাবে গ্রহণ
       const attemptId = result.attemptId || result._id || result.attempt?._id;
-      
+
       if (attemptId) {
         navigate(`/student/exam/${attemptId}`);
       } else {
@@ -83,7 +83,7 @@ const StudentJoin = () => {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
         <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
-        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration} মিনিট</p>
+        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration || 0} মিনিট</p>
 
         {user && user.role === 'student' ? (
           <div className="text-center space-y-4">
@@ -95,8 +95,8 @@ const StudentJoin = () => {
 
             <button
               onClick={handleStartExam}
-              disabled={submitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-medium py-2.5 rounded-lg transition"
+              disabled={submitting || !currentExam?._id}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800/60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition"
             >
               {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
             </button>
@@ -111,7 +111,7 @@ const StudentJoin = () => {
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
                 placeholder="উদাহরণ: রাকিব হাসান"
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -122,7 +122,7 @@ const StudentJoin = () => {
                 value={rollNumber}
                 onChange={(e) => setRollNumber(e.target.value)}
                 placeholder="উদাহরণ: 101"
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -132,13 +132,13 @@ const StudentJoin = () => {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="017xxxxxxxx"
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:border-indigo-500"
               />
             </div>
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-medium py-2.5 rounded-lg transition"
+              disabled={submitting || !currentExam?._id}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800/60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition"
             >
               {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
             </button>
