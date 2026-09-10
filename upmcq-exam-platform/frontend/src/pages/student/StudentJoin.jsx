@@ -35,18 +35,17 @@ const StudentJoin = () => {
   const handleStartExam = async (e) => {
     if (e) e.preventDefault();
 
-    // ব্যাকএন্ড থেকে আসা ডেটার সব সম্ভাব্য প্রপার্টি চেক করা হচ্ছে
+    // ব্যাকএন্ডে পাঠানোর জন্য আইডি বা কোড নিশ্চিত করা
     const targetExamId = 
       currentExam?._id || 
       currentExam?.id || 
       currentExam?.examId || 
       currentExam?.exam?._id ||
-      currentExam?.exam?.id ||
-      (typeof currentExam === 'string' ? currentExam : null);
+      currentExam?.examCode || 
+      code; // URL-এর কোডটি ফলব্যাক হিসেবে ব্যবহার করা হলো
 
     if (!targetExamId) {
-      // এটি আপনাকে বলে দেবে ব্রাউজারে ঠিক কী ডেটা আসছে
-      alert(`Debug Info: ${JSON.stringify(currentExam)}`);
+      alert('পরীক্ষার তথ্য পাওয়া যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন।');
       return;
     }
 
@@ -64,6 +63,7 @@ const StudentJoin = () => {
       const result = await dispatch(
         startAttempt({
           examId: targetExamId,
+          examCode: code, // ব্যাকএন্ড যদি examCode চায়
           studentName: nameToUse,
           rollNumber: rollToUse,
           phone: phoneToUse,
@@ -93,12 +93,12 @@ const StudentJoin = () => {
     currentExam?.settings?.totalTimeMinutes ||
     currentExam?.totalTimeMinutes ||
     currentExam?.duration ||
-    10;
+    20;
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
-        <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || currentExam?.exam?.title || 'Exam'}</h1>
+        <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
         <p className="text-center text-slate-400 mb-6">সময়: {examDuration} মিনিট</p>
 
         {user && user.role === 'student' ? (
@@ -135,7 +135,7 @@ const StudentJoin = () => {
               <input
                 type="text"
                 required
-                value={rollNumber}
+                value= {rollNumber}
                 onChange={(e) => setRollNumber(e.target.value)}
                 placeholder="উদাহরণ: 101"
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:border-indigo-500"
