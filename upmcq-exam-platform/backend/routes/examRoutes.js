@@ -7,8 +7,9 @@ const ctrl = require('../controllers/examController');
 // ==========================================
 // ১. পাবলিক রুটস (No Auth Required)
 // ==========================================
-// নির্দিষ্ট কোড দিয়ে পরীক্ষার তথ্য দেখা (Join পেজ)
+// নির্দিষ্ট কোড দিয়ে পরীক্ষার তথ্য দেখা (Join পেজ)
 router.get('/public/:code', ctrl.getExamByCode);
+router.get('/code/:code', ctrl.getExamByCode); // 👈 ফ্রন্টএন্ডের জন্য নতুন পাবলিক রাউট
 
 // পাবলিক: সব পাবলিশড পরীক্ষার তালিকা (Student Portal-এর জন্য)
 router.get('/public-list', ctrl.getPublicExams);
@@ -29,7 +30,6 @@ router.use(protect, authorize('teacher'));
 
 // ==========================================
 // ৩. স্পেসিফিক রুটসমূহ (Static & Specific Paths)
-// (Dynamic `/:id` এর আগে রাখা হয়েছে যাতে Route Conflict না হয়)
 // ==========================================
 router.post('/upload', upload.single('pdf'), ctrl.uploadExamPdf);
 router.get('/', ctrl.getMyExams);
