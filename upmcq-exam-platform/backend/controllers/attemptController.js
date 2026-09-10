@@ -17,10 +17,10 @@ function shuffleArray(arr) {
   return a;
 }
 
-// ---------- ১. Exam জয়েন করা (নাম/রোল/ফোন দিয়ে) ----------
+// ---------- ১. Exam জয়েন করা (লগইন করা ইউজার অথবা ম্যানুয়াল ডাটা দিয়ে) ----------
 exports.joinExam = async (req, res) => {
   try {
-    const { examCode, studentName, studentRoll, studentPhone, accessCode } = req.body;
+    const { examCode, studentName, studentRoll, studentPhone, accessCode, studentId } = req.body;
 
     const exam = await Exam.findOne({ examCode });
     if (!exam || exam.status !== 'published')
@@ -31,9 +31,14 @@ exports.joinExam = async (req, res) => {
 
     const allowRepetition = exam.settings.allowRepetition;
 
+    // লগইন ইউজার আইডি অথবা রোল নম্বর দিয়ে ফিল্টার তৈরি
+    const studentQuery = studentId 
+      ? { exam: exam._id, studentId } 
+      : { exam: exam._id, studentRoll };
+
     if (!allowRepetition) {
       // আগে থেকেই Submit করা থাকলে আবার দেয়া যাবে না
-      const existing = await Attempt.findOne({ exam: exam._id, studentRoll });
+      const existing = await Attempt.findOne(studentQuery);
       if (existing && existing.status === 'submitted') {
         return res.status(400).json({ message: 'তুমি ইতিমধ্যে এই পরীক্ষা জমা দিয়েছো' });
       }
@@ -42,8 +47,8 @@ exports.joinExam = async (req, res) => {
         return res.json(buildStudentExamPayload(exam, existing, questions));
       }
     } else {
-      // Repetition অন থাকলে চলমান কোনো এটেম্পট থাকলে সেটা রিজিউম করাও, নাহলে নতুন করে শুরু করতে দাও
-      const existingInProgress = await Attempt.findOne({ exam: exam._id, studentRoll, status: 'in-progress' });
+      // Repetition অন থাকলে চলমান কোনো এটেম্পট থাকলে সেটা রিজিউম করাও
+      const existingInProgress = await Attempt.findOne({ ...studentQuery, status: 'in-progress' });
       if (existingInProgress) {
         const questions = await Question.find({ _id: { $in: existingInProgress.questionOrder } });
         return res.json(buildStudentExamPayload(exam, existingInProgress, questions));
@@ -72,6 +77,7 @@ exports.joinExam = async (req, res) => {
 
     const attempt = await Attempt.create({
       exam: exam._id,
+      studentId: studentId || null, // লগইন থাকা স্টুডেন্টের ID
       studentName,
       studentRoll,
       studentPhone,
@@ -238,7 +244,7 @@ exports.downloadResultPdf = async (req, res) => {
 
     doc.fontSize(18).text(exam.title, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`নাম: ${attempt.studentName}   রোল: ${attempt.studentRoll}`);
+    doc.fontSize(12).text(`নাম: ${attempt.studentName}    রোল: ${attempt.studentRoll}`);
     doc.text(
       `প্রাপ্ত নম্বর: ${attempt.obtainedMarks} | সঠিক: ${attempt.totalCorrect} | ভুল: ${attempt.totalWrong} | স্কিপ: ${attempt.totalSkipped}`
     );
@@ -324,6 +330,21 @@ exports.getAttemptReview = async (req, res) => {
     });
 
     res.json({ examTitle: exam.title, items });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ---------- ৭. শিক্ষকের রেজাল্ট ড্যাশবোর্ডের জন্য পুরো পরীক্ষার রেজাল্ট ফেচ করা ----------
+exports.getTeacherExamDashboardResults = async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    const attempts = await Attempt.find({ exam: examId, status: 'submitted' })
+      .populate('studentId', 'name email rollNumber')
+      .sort({ obtainedMarks: -1, submittedAt: 1 });
+
+    res.json(attempts);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
