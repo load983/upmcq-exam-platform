@@ -49,6 +49,9 @@ exports.uploadExamPdf = async (req, res) => {
       sourcePdfPath: req.file.path || null,
       examCode,
       status: 'draft',
+      settings: {
+        totalTimeMinutes: 10, // ডিফল্ট সময় ১০ মিনিট দেওয়া হলো
+      }
     });
 
     const questionDocs = parsedQuestions.map((q, index) => ({
@@ -102,7 +105,14 @@ exports.updateExamSettings = async (req, res) => {
     }
 
     exam.title = req.body.title ?? exam.title;
-    exam.settings = { ...exam.settings?.toObject(), ...req.body.settings };
+    
+    // settings আপডেট নিশ্চিত করা এবং সময় ০ না রাখার সেফগারার্ড
+    const updatedSettings = { ...exam.settings?.toObject(), ...req.body.settings };
+    if (!updatedSettings.totalTimeMinutes || Number(updatedSettings.totalTimeMinutes) <= 0) {
+      updatedSettings.totalTimeMinutes = 10;
+    }
+    
+    exam.settings = updatedSettings;
     if (req.body.accessCode !== undefined) exam.accessCode = req.body.accessCode;
 
     await exam.save();
@@ -281,12 +291,19 @@ exports.getExamByCode = async (req, res) => {
       }
     }
 
+    // ০ বা undefined যেন না যায় তার জন্য fallback সময়
+    const rawTime = exam.settings?.totalTimeMinutes;
+    const duration = rawTime && Number(rawTime) > 0 ? Number(rawTime) : 10;
+
     res.json({
       title: exam.title,
       examCode: exam.examCode,
       requiresAccessCode: !!exam.accessCode,
-      totalTimeMinutes: exam.settings?.totalTimeMinutes || 0,
-      settings: exam.settings,
+      totalTimeMinutes: duration,
+      settings: {
+        ...exam.settings?.toObject(),
+        totalTimeMinutes: duration,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -396,28 +413,31 @@ exports.getPublicExams = async (req, res) => {
     const validExams = publishedExams.filter((exam) => {
       const schedule = exam.settings?.schedule;
 
-      // যদি শডিউল অপশন ডিসেবলড (false) থাকে অথবা সেট করাই না থাকে, তাহলে পোর্টালে সরাসরি দেখাবে
       if (!schedule || schedule.enabled === false) {
         return true;
       }
 
-      // শডিউল অন (enabled: true) থাকলে সময় চেক করা হবে
       if (schedule.startAt && now < new Date(schedule.startAt)) {
-        return false; // পরীক্ষা শুরু হতে সময় বাকি
+        return false;
       }
       if (schedule.endAt && now > new Date(schedule.endAt)) {
-        return false; // পরীক্ষার মেয়াদ শেষ
+        return false;
       }
 
       return true;
     });
 
-    // ৩. প্রতিটি এক্সামের জন্য মোট Attempt (অংশগ্রহণ সংখ্যা) গণনা করা
+    // ৩. প্রতিটি এক্সামের জন্য মোট Attempt এবং ডিফল্ট টাইম ফিক্স করা
     const examsWithAttempts = await Promise.all(
       validExams.map(async (exam) => {
         const attemptCount = await Attempt.countDocuments({ exam: exam._id });
+        const time = exam.settings?.totalTimeMinutes > 0 ? exam.settings.totalTimeMinutes : 10;
         return {
           ...exam,
+          settings: {
+            ...exam.settings,
+            totalTimeMinutes: time
+          },
           attemptCount,
         };
       })
