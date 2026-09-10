@@ -15,6 +15,9 @@ const attemptSchema = new mongoose.Schema(
   {
     exam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
 
+    // যদি স্টুডেন্ট লগইন অবস্থায় থাকে
+    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+
     // Student এর তথ্য (নাম/রোল/ফোন দিয়ে জয়েন করে, আলাদা account না থাকলেও চলবে)
     studentName: { type: String, required: true },
     studentRoll: { type: String, required: true },
@@ -42,7 +45,8 @@ const attemptSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// রোল অনুযায়ী দ্রুত খোঁজার জন্য ইনডেক্স (ইউনিক না — Repetition অন থাকলে একই রোল একাধিকবার Attempt নিতে পারে)
+// রোল ও স্টুডেন্ট আইডি অনুযায়ী দ্রুত খোঁজার জন্য ইনডেক্স
 attemptSchema.index({ exam: 1, studentRoll: 1 });
+attemptSchema.index({ exam: 1, studentId: 1 });
 
 module.exports = mongoose.model('Attempt', attemptSchema);
