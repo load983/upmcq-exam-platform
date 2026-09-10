@@ -1,70 +1,109 @@
-// ================== controllers/authController.js ==================
+const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 
-const signToken = (user) =>
-  jwt.sign({ id: user._id, role: user.role, name: user.name }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+// Teacher Register & Login... (আপনার বিদ্যমান কোড একই থাকবে)
 
-// Teacher রেজিস্ট্রেশন
-exports.registerTeacher = async (req, res) => {
+// ====== Student Auth Controllers ======
+
+// Student Registration (Name, Roll, Phone, Password)
+exports.studentRegister = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'নাম, ইমেইল ও পাসওয়ার্ড আবশ্যক' });
+    const { name, roll, phone, password } = req.body;
+
+    if (!name || !roll || !phone || !password) {
+      return res.status(400).json({ message: 'সবগুলো ফিল্ড পুরন করুন' });
     }
-    const exists = await User.findOne({ email, role: 'teacher' });
-    if (exists) return res.status(400).json({ message: 'এই ইমেইলে আগে থেকে একাউন্ট আছে' });
 
-    const hashed = await bcrypt.hash(password, 10);
-    const teacher = await User.create({ name, email, password: hashed, role: 'teacher' });
+    let existingUser = await User.findOne({ phone, role: 'student' });
+    if (existingUser) {
+      return res.status(400).json({ message: 'এই ফোন নম্বর দিয়ে ইতিমধ্যেই অ্যাকাউন্ট তৈরি করা হয়েছে' });
+    }
 
-    res.status(201).json({ token: signToken(teacher), user: { id: teacher._id, name, email, role: 'teacher' } });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const student = new User({
+      name,
+      roll,
+      phone,
+      password: hashedPassword,
+      role: 'student'
+    });
+
+    await student.save();
+
+    const token = jwt.sign(
+      { id: student._id, role: student.role },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '30d' }
+    );
+
+    res.status(201).json({
+      message: 'অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে',
+      token,
+      user: {
+        id: student._id,
+        name: student.name,
+        roll: student.roll,
+        phone: student.phone,
+        role: student.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// Teacher লগইন
-exports.loginTeacher = async (req, res) => {
+// Student Login (Phone & Password)
+exports.studentLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const teacher = await User.findOne({ email, role: 'teacher' });
-    if (!teacher) return res.status(400).json({ message: 'ভুল ইমেইল বা পাসওয়ার্ড' });
+    const { phone, password } = req.body;
 
-    const match = await bcrypt.compare(password, teacher.password);
-    if (!match) return res.status(400).json({ message: 'ভুল ইমেইল বা পাসওয়ার্ড' });
+    if (!phone || !password) {
+      return res.status(400).json({ message: 'ফোন নম্বর এবং পাসওয়ার্ড প্রদান করুন' });
+    }
+
+    const student = await User.findOne({ phone, role: 'student' });
+    if (!student) {
+      return res.status(400).json({ message: 'শিক্ষার্থী পাওয়া যায়নি' });
+    }
+
+    const isMatch = await bcrypt.compare(password, student.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'পাসওয়ার্ড ভুল হয়েছে' });
+    }
+
+    const token = jwt.sign(
+      { id: student._id, role: student.role },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '30d' }
+    );
 
     res.json({
-      token: signToken(teacher),
-      user: { id: teacher._id, name: teacher.name, email: teacher.email, role: 'teacher' },
+      message: 'সফলভাবে লগইন হয়েছে',
+      token,
+      user: {
+        id: student._id,
+        name: student.name,
+        roll: student.roll,
+        phone: student.phone,
+        role: student.role
+      }
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// Student জয়েন (আলাদা রেজিস্ট্রেশনের দরকার নেই, নাম/রোল/ফোন দিয়েই এন্ট্রি হবে)
-// exam জয়েন করার সময় attemptController এ এটা হ্যান্ডেল হয়, তবে
-// আলাদা "student session token" দরকার হলে এখান থেকেও ইস্যু করা যায়
-exports.studentQuickLogin = async (req, res) => {
+// Get All Registered Students (Teacher Only)
+exports.getRegisteredStudents = async (req, res) => {
   try {
-    const { name, roll, phone } = req.body;
-    if (!name || !roll) return res.status(400).json({ message: 'নাম ও রোল আবশ্যক' });
+    const students = await User.find({ role: 'student' })
+      .select('-password')
+      .sort({ createdAt: -1 });
 
-    let student = await User.findOne({ role: 'student', roll, phone });
-    if (!student) {
-      student = await User.create({ name, roll, phone, role: 'student' });
-    }
-    const token = jwt.sign(
-      { id: student._id, role: 'student', name, roll },
-      process.env.JWT_SECRET,
-      { expiresIn: '6h' }
-    );
-    res.json({ token, user: { id: student._id, name, roll, phone, role: 'student' } });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.json(students);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
