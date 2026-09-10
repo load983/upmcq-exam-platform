@@ -29,9 +29,9 @@ exports.joinExam = async (req, res) => {
     if (exam.accessCode && exam.accessCode !== accessCode)
       return res.status(401).json({ message: 'ভুল Access Code' });
 
-    const allowRepetition = exam.settings.allowRepetition;
+    const allowRepetition = exam.settings?.allowRepetition;
 
-    // লগইন ইউজার আইডি অথবা রোল নম্বর দিয়ে ফিল্টার তৈরি
+    // লগইন ইউজার আইডি অথবা রোল নম্বর দিয়ে ফিল্টার তৈরি
     const studentQuery = studentId 
       ? { exam: exam._id, studentId } 
       : { exam: exam._id, studentRoll };
@@ -58,17 +58,17 @@ exports.joinExam = async (req, res) => {
     let questions = await Question.find({ exam: exam._id }).sort({ order: 1 });
 
     // Total Questions to use সেটিং অনুযায়ী কতগুলো প্রশ্ন নেয়া হবে
-    const limit = exam.settings.totalQuestionsToUse;
+    const limit = exam.settings?.totalQuestionsToUse;
     if (limit && limit > 0 && limit < questions.length) {
       questions = shuffleArray(questions).slice(0, limit);
     }
-    if (exam.settings.shuffleQuestions) {
+    if (exam.settings?.shuffleQuestions) {
       questions = shuffleArray(questions);
     }
 
     // অপশন শাফল হলে প্রতিটা প্রশ্নের জন্য একটা ম্যাপিং সেভ রাখা হয়
     const optionOrderMap = {};
-    if (exam.settings.shuffleOptions) {
+    if (exam.settings?.shuffleOptions) {
       questions.forEach((q) => {
         const indices = shuffleArray(q.options.map((_, i) => i));
         optionOrderMap[q._id.toString()] = indices;
@@ -106,10 +106,14 @@ function buildStudentExamPayload(exam, attempt, questions) {
     return { _id: q._id, questionText: q.questionText, options };
   });
 
+  // সময় যেন ০ না আসে তার জন্য সেফগার্ড
+  const rawTime = exam.settings?.totalTimeMinutes;
+  const timeMinutes = rawTime && Number(rawTime) > 0 ? Number(rawTime) : 10;
+
   return {
     attemptId: attempt._id,
     examTitle: exam.title,
-    totalTimeMinutes: exam.settings.totalTimeMinutes,
+    totalTimeMinutes: timeMinutes,
     startedAt: attempt.startedAt,
     questions: safeQuestions,
   };
@@ -155,7 +159,7 @@ exports.submitAttempt = async (req, res) => {
     const exam = await Exam.findById(attempt.exam);
 
     if (attempt.status === 'submitted')
-      return res.json(await buildResultPayload(attempt, exam, exam.settings.showResultInstantly));
+      return res.json(await buildResultPayload(attempt, exam, exam.settings?.showResultInstantly));
 
     const questions = await Question.find({ _id: { $in: attempt.questionOrder } });
     const qMap = {};
@@ -163,9 +167,9 @@ exports.submitAttempt = async (req, res) => {
 
     let correct = 0,
       wrong = 0;
-    const marksPerQ = exam.settings.marksPerQuestion;
-    const negEnabled = exam.settings.negativeMarking.enabled;
-    const negMarks = exam.settings.negativeMarking.marksPerWrong;
+    const marksPerQ = exam.settings?.marksPerQuestion || 1;
+    const negEnabled = exam.settings?.negativeMarking?.enabled || false;
+    const negMarks = exam.settings?.negativeMarking?.marksPerWrong || 0;
 
     attempt.questionOrder.forEach((qId) => {
       const q = qMap[qId.toString()];
@@ -192,7 +196,7 @@ exports.submitAttempt = async (req, res) => {
     attempt.status = 'submitted';
     await attempt.save();
 
-    res.json(await buildResultPayload(attempt, exam, exam.settings.showResultInstantly));
+    res.json(await buildResultPayload(attempt, exam, exam.settings?.showResultInstantly));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
