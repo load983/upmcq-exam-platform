@@ -1,162 +1,137 @@
-// ================== pages/student/StudentJoin.jsx ==================
-// Teacher এর দেয়া লিংক (/join/:code) দিয়ে স্টুডেন্ট এখানে আসে, নাম/রোল/ফোন দিয়ে জয়েন করে
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import axiosClient from '../../api/axiosClient';
-import { joinExam } from '../../features/attempt/attemptSlice';
+import { fetchExamByCode } from '../../features/exam/examSlice';
+import { startAttempt } from '../../features/attempt/attemptSlice';
 
-export default function StudentJoin() {
-  const { code } = useParams();
-  const [examInfo, setExamInfo] = useState(null);
-  const [loadingInfo, setLoadingInfo] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [form, setForm] = useState({
-    studentName: '',
-    studentRoll: '',
-    studentPhone: '',
-    accessCode: '',
-  });
-
-  const dispatch = useDispatch();
+const StudentJoin = () => {
+  const { examCode } = useParams();
   const navigate = useNavigate();
-  const { status, error } = useSelector((s) => s.attempt);
+  const dispatch = useDispatch();
+
+  const { currentExam, loading: examLoading, error: examError } = useSelector((state) => state.exam);
+  const { user } = useSelector((state) => state.auth); // লগইন করা ইউজার অবজেক্ট
+
+  const [studentName, setStudentName] = useState('');
+  const [rollNumber, setRollNumber] = useState('');
+  const [phone, setPhone] = useState('');
 
   useEffect(() => {
-    setLoadingInfo(true);
-    axiosClient
-      .get(`/exams/public/${code}`)
-      .then(({ data }) => {
-        setExamInfo(data);
-        setLoadError('');
-      })
-      .catch((err) => {
-        setLoadError(err.response?.data?.message || 'পরীক্ষা পাওয়া যায়নি বা মেয়াদ শেষ হয়ে গেছে');
-      })
-      .finally(() => {
-        setLoadingInfo(false);
-      });
-  }, [code]);
+    if (examCode) {
+      dispatch(fetchExamByCode(examCode));
+    }
+  }, [dispatch, examCode]);
 
-  const handleSubmit = async (e) => {
+  // শিক্ষার্থী লগইন করা থাকলে তার প্রোফাইলের তথ্য সেট করা
+  useEffect(() => {
+    if (user && user.role === 'student') {
+      setStudentName(user.name || '');
+      setRollNumber(user.rollNumber || '');
+      setPhone(user.phone || '');
+    }
+  }, [user]);
+
+  const handleStartExam = async (e) => {
     e.preventDefault();
-    
-    // ডাটা ট্রিম করে পাঠানো
-    const payload = {
-      examCode: code,
-      studentName: form.studentName.trim(),
-      studentRoll: form.studentRoll.trim(),
-      studentPhone: form.studentPhone.trim(),
-      accessCode: form.accessCode.trim(),
-    };
 
-    const result = await dispatch(joinExam(payload));
-    if (joinExam.fulfilled.match(result)) {
-      navigate('/exam/live');
+    // যদি ইউজার লগইন না থাকে তবে ফর্ম ফিলাপ বাধ্যতামূলক
+    const nameToUse = user ? user.name : studentName;
+    const rollToUse = user ? (user.rollNumber || '0') : rollNumber;
+    const phoneToUse = user ? (user.phone || '') : phone;
+
+    if (!nameToUse || (!user && !rollToUse)) {
+      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
+      return;
+    }
+
+    try {
+      const result = await dispatch(
+        startAttempt({
+          examId: currentExam._id,
+          studentName: nameToUse,
+          rollNumber: rollToUse,
+          phone: phoneToUse,
+          studentId: user ? user._id : null, // লগইন করা ইউজারের ID পাঠানো
+        })
+      ).unwrap();
+
+      navigate(`/student/exam/${result._id}`);
+    } catch (err) {
+      console.error('Failed to start exam:', err);
     }
   };
 
-  if (loadingInfo) {
-    return (
-      <div className="max-w-sm mx-auto mt-16 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow text-center animate-pulse">
-        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-3/4 mx-auto"></div>
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-6 w-1/2 mx-auto"></div>
-        <div className="space-y-3">
-          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="max-w-sm mx-auto mt-16 p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl text-center">
-        <p className="text-red-600 dark:text-red-400 font-medium">{loadError}</p>
-      </div>
-    );
-  }
+  if (examLoading) return <div className="p-8 text-center text-white">Loding exam...</div>;
+  if (examError) return <div className="p-8 text-center text-red-500">{examError}</div>;
 
   return (
-    <div className="max-w-sm mx-auto mt-10 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
-      <h2 className="text-xl font-bold mb-1 text-gray-900 dark:text-white">{examInfo.title}</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        সময়: <span className="font-semibold text-gray-700 dark:text-gray-300">{examInfo.totalTimeMinutes} মিনিট</span>
-      </p>
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
+        <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
+        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration} মিনিট</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-            তোমার নাম <span className="text-red-500">*</span>
-          </label>
-          <input
-            required
-            type="text"
-            placeholder="উদাহরণ: রাকিব হাসান"
-            value={form.studentName}
-            onChange={(e) => setForm({ ...form, studentName: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
+        {/* যদি শিক্ষার্থী ইতিমধ্যে লগইন করে থাকে */}
+        {user && user.role === 'student' ? (
+          <div className="text-center space-y-4">
+            <div className="bg-slate-700/50 p-4 rounded-lg text-left text-sm space-y-1 border border-slate-600">
+              <p><span className="text-slate-400">পরীক্ষার্থী:</span> <strong className="text-white">{user.name}</strong></p>
+              {user.rollNumber && <p><span className="text-slate-400">রোল নম্বর:</span> <strong className="text-white">{user.rollNumber}</strong></p>}
+              {user.email && <p><span className="text-slate-400">ইমেইল:</span> <strong className="text-white">{user.email}</strong></p>}
+            </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-            রোল নম্বর <span className="text-red-500">*</span>
-          </label>
-          <input
-            required
-            type="text"
-            placeholder="উদাহরণ: 101"
-            value={form.studentRoll}
-            onChange={(e) => setForm({ ...form, studentRoll: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-            ফোন নম্বর (ঐচ্ছিক)
-          </label>
-          <input
-            type="tel"
-            placeholder="017xxxxxxxx"
-            value={form.studentPhone}
-            onChange={(e) => setForm({ ...form, studentPhone: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-
-        {examInfo.requiresAccessCode && (
-          <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              একসেস কোড (Access Code) <span className="text-red-500">*</span>
-            </label>
-            <input
-              required
-              type="password"
-              placeholder="শিক্ষকের দেওয়া কোড লিখো"
-              value={form.accessCode}
-              onChange={(e) => setForm({ ...form, accessCode: e.target.value })}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+            <button
+              onClick={handleStartExam}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition"
+            >
+              পরীক্ষা শুরু করো
+            </button>
           </div>
+        ) : (
+          /* যদি লগইন না করা থাকে (গেস্ট ইউজার) */
+          <form onSubmit={handleStartExam} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">তোমার নাম <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                required
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                placeholder="উদাহরণ: রাকিব হাসান"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">রোল নম্বর <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                required
+                value={rollNumber}
+                onChange={(e) => setRollNumber(e.target.value)}
+                placeholder="উদাহরণ: 101"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">ফোন নম্বর (ঐচ্ছিক)</label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="017xxxxxxxx"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition"
+            >
+              পরীক্ষা শুরু করো
+            </button>
+          </form>
         )}
-
-        {error && (
-          <div className="p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-xs font-medium">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={status === 'loading'}
-          className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2.5 rounded-lg font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm"
-        >
-          {status === 'loading' ? 'জয়েন হচ্ছে...' : 'পরীক্ষা শুরু করো'}
-        </button>
-      </form>
+      </div>
     </div>
   );
-}
+};
+
+export default StudentJoin;
