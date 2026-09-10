@@ -5,7 +5,10 @@ import { fetchExamByCode, clearCurrentExam } from '../../features/exam/examSlice
 import { startAttempt } from '../../features/attempt/attemptSlice';
 
 const StudentJoin = () => {
-  const { examCode } = useParams();
+  // useParams থেকে নিরাপদে কোড রিসিভ করা (examCode, code বা id যা-ই থাক)
+  const params = useParams();
+  const examCode = params.examCode || params.code || params.id;
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -19,7 +22,7 @@ const StudentJoin = () => {
 
   useEffect(() => {
     if (examCode) {
-      dispatch(clearCurrentExam()); // পুরনো এক্সাম ডাটা ফ্ল্যাশ করা
+      dispatch(clearCurrentExam());
       dispatch(fetchExamByCode(examCode));
     }
   }, [dispatch, examCode]);
@@ -35,8 +38,11 @@ const StudentJoin = () => {
   const handleStartExam = async (e) => {
     if (e) e.preventDefault();
 
-    if (!currentExam?._id) {
-      alert('পরীক্ষার তথ্য পাওয়া যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন।');
+    // _id বা id দুটোই সাপোর্ট করানো হচ্ছে
+    const targetExamId = currentExam?._id || currentExam?.id;
+
+    if (!targetExamId) {
+      alert('পরীক্ষার তথ্য পাওয়া যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন।');
       return;
     }
 
@@ -45,7 +51,7 @@ const StudentJoin = () => {
     const phoneToUse = user ? (user.phone || '') : phone;
 
     if (!nameToUse?.trim() || (!user && !rollToUse?.trim())) {
-      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
+      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
       return;
     }
 
@@ -53,24 +59,24 @@ const StudentJoin = () => {
       setSubmitting(true);
       const result = await dispatch(
         startAttempt({
-          examId: currentExam._id,
+          examId: targetExamId,
           studentName: nameToUse,
           rollNumber: rollToUse,
           phone: phoneToUse,
-          studentId: user ? user._id : null,
+          studentId: user ? user._id || user.id : null,
         })
       ).unwrap();
 
-      const attemptId = result.attemptId || result._id || result.attempt?._id;
+      const attemptId = result.attemptId || result._id || result.id || result.attempt?._id || result.attempt?.id;
 
       if (attemptId) {
         navigate(`/student/exam/${attemptId}`);
       } else {
-        alert('পরীক্ষা শুরু করা সম্ভব হয়নি। আবার চেষ্টা করুন।');
+        alert('পরীক্ষা শুরু করা সম্ভব হয়নি। আবার চেষ্টা করুন।');
       }
     } catch (err) {
       console.error('Failed to start exam:', err);
-      alert(typeof err === 'string' ? err : 'পরীক্ষা শুরু করতে সমস্যা হয়েছে');
+      alert(typeof err === 'string' ? err : 'পরীক্ষা শুরু করতে সমস্যা হয়েছে');
     } finally {
       setSubmitting(false);
     }
@@ -79,11 +85,13 @@ const StudentJoin = () => {
   if (examLoading) return <div className="p-8 text-center text-white">Loading exam...</div>;
   if (examError) return <div className="p-8 text-center text-red-500">{examError}</div>;
 
+  const targetExamId = currentExam?._id || currentExam?.id;
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
         <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
-        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration || 0} মিনিট</p>
+        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration || 0} মিনিট</p>
 
         {user && user.role === 'student' ? (
           <div className="text-center space-y-4">
@@ -95,7 +103,7 @@ const StudentJoin = () => {
 
             <button
               onClick={handleStartExam}
-              disabled={submitting || !currentExam?._id}
+              disabled={submitting || !targetExamId}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800/60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition"
             >
               {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
@@ -137,7 +145,7 @@ const StudentJoin = () => {
             </div>
             <button
               type="submit"
-              disabled={submitting || !currentExam?._id}
+              disabled={submitting || !targetExamId}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800/60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition"
             >
               {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
