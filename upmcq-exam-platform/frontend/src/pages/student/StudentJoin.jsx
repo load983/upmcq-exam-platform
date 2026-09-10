@@ -5,10 +5,8 @@ import { fetchExamByCode, clearCurrentExam } from '../../features/exam/examSlice
 import { startAttempt } from '../../features/attempt/attemptSlice';
 
 const StudentJoin = () => {
-  // useParams থেকে নিরাপদে কোড রিসিভ করা (examCode, code বা id যা-ই থাক)
-  const params = useParams();
-  const examCode = params.examCode || params.code || params.id;
-
+  // App.jsx এর /join/:code অনুযায়ী useParams থেকে code গ্রহণ করা
+  const { code } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -21,11 +19,11 @@ const StudentJoin = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (examCode) {
+    if (code) {
       dispatch(clearCurrentExam());
-      dispatch(fetchExamByCode(examCode));
+      dispatch(fetchExamByCode(code));
     }
-  }, [dispatch, examCode]);
+  }, [dispatch, code]);
 
   useEffect(() => {
     if (user && user.role === 'student') {
@@ -38,7 +36,6 @@ const StudentJoin = () => {
   const handleStartExam = async (e) => {
     if (e) e.preventDefault();
 
-    // _id বা id দুটোই সাপোর্ট করানো হচ্ছে
     const targetExamId = currentExam?._id || currentExam?.id;
 
     if (!targetExamId) {
@@ -51,7 +48,7 @@ const StudentJoin = () => {
     const phoneToUse = user ? (user.phone || '') : phone;
 
     if (!nameToUse?.trim() || (!user && !rollToUse?.trim())) {
-      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
+      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
       return;
     }
 
@@ -70,7 +67,8 @@ const StudentJoin = () => {
       const attemptId = result.attemptId || result._id || result.id || result.attempt?._id || result.attempt?.id;
 
       if (attemptId) {
-        navigate(`/student/exam/${attemptId}`);
+        // App.jsx এর /exam/live বা আপনার টার্গেট রাউট
+        navigate(`/exam/live`, { state: { attemptId } });
       } else {
         alert('পরীক্ষা শুরু করা সম্ভব হয়নি। আবার চেষ্টা করুন।');
       }
@@ -91,7 +89,7 @@ const StudentJoin = () => {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
         <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
-        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration || 0} মিনিট</p>
+        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration || 0} মিনিট</p>
 
         {user && user.role === 'student' ? (
           <div className="text-center space-y-4">
