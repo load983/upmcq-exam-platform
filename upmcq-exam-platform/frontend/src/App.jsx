@@ -1,4 +1,3 @@
-// ================== App.jsx ==================
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -7,7 +6,6 @@ import PrivateRoute from './components/PrivateRoute';
 import Home from './pages/Home';
 import StudentHome from './pages/StudentHome';
 
-// 🛠️ সঠিক পাথ এবং ফাইলের নাম আপডেট করা হয়েছে
 import StudentAuth from './pages/student/StudentAuthPage'; 
 
 import TeacherLogin from './pages/teacher/TeacherLogin';
