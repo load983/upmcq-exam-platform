@@ -10,7 +10,7 @@ const StudentJoin = () => {
   const dispatch = useDispatch();
 
   const { currentExam, loading: examLoading, error: examError } = useSelector((state) => state.exam);
-  const { user } = useSelector((state) => state.auth); // লগইন করা ইউজার অবজেক্ট
+  const { user } = useSelector((state) => state.auth);
 
   const [studentName, setStudentName] = useState('');
   const [rollNumber, setRollNumber] = useState('');
@@ -22,7 +22,6 @@ const StudentJoin = () => {
     }
   }, [dispatch, examCode]);
 
-  // শিক্ষার্থী লগইন করা থাকলে তার প্রোফাইলের তথ্য সেট করা
   useEffect(() => {
     if (user && user.role === 'student') {
       setStudentName(user.name || '');
@@ -32,15 +31,14 @@ const StudentJoin = () => {
   }, [user]);
 
   const handleStartExam = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
-    // যদি ইউজার লগইন না থাকে তবে ফর্ম ফিলাপ বাধ্যতামূলক
     const nameToUse = user ? user.name : studentName;
-    const rollToUse = user ? (user.rollNumber || '0') : rollNumber;
+    const rollToUse = user ? (user.rollNumber || 'N/A') : rollNumber;
     const phoneToUse = user ? (user.phone || '') : phone;
 
     if (!nameToUse || (!user && !rollToUse)) {
-      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
+      alert('অনুগ্রহ করে প্রয়োজনীয় তথ্য দিন।');
       return;
     }
 
@@ -51,7 +49,7 @@ const StudentJoin = () => {
           studentName: nameToUse,
           rollNumber: rollToUse,
           phone: phoneToUse,
-          studentId: user ? user._id : null, // লগইন করা ইউজারের ID পাঠানো
+          studentId: user ? user._id : null,
         })
       ).unwrap();
 
@@ -61,16 +59,15 @@ const StudentJoin = () => {
     }
   };
 
-  if (examLoading) return <div className="p-8 text-center text-white">Loding exam...</div>;
+  if (examLoading) return <div className="p-8 text-center text-white">Loading exam...</div>;
   if (examError) return <div className="p-8 text-center text-red-500">{examError}</div>;
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
         <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
-        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration} মিনিট</p>
+        <p className="text-center text-slate-400 mb-6">সময়: {currentExam?.duration} মিনিট</p>
 
-        {/* যদি শিক্ষার্থী ইতিমধ্যে লগইন করে থাকে */}
         {user && user.role === 'student' ? (
           <div className="text-center space-y-4">
             <div className="bg-slate-700/50 p-4 rounded-lg text-left text-sm space-y-1 border border-slate-600">
@@ -87,7 +84,6 @@ const StudentJoin = () => {
             </button>
           </div>
         ) : (
-          /* যদি লগইন না করা থাকে (গেস্ট ইউজার) */
           <form onSubmit={handleStartExam} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">তোমার নাম <span className="text-red-500">*</span></label>
