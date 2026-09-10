@@ -3,7 +3,6 @@ import axios from '../../api/axiosClient';
 
 const API_URL = '/exams';
 
-// FETCH THUNKS
 export const fetchExams = createAsyncThunk('exam/fetchExams', async (_, { rejectWithValue }) => {
   try {
     const r = await axios.get(API_URL);
@@ -31,10 +30,9 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
   }
 });
 
-// EXAM CODE দিয়ে পরীক্ষা খোঁজার Async Thunk
-export const fetchExamByCode = createAsyncThunk('exam/fetchExamByCode', async (examCode, { rejectWithValue }) => {
+export const fetchExamByCode = createAsyncThunk('exam/fetchExamByCode', async (code, { rejectWithValue }) => {
   try {
-    const r = await axios.get(`${API_URL}/code/${examCode}`);
+    const r = await axios.get(`${API_URL}/code/${code}`);
     return r.data;
   } catch (e) {
     return rejectWithValue(e.response?.data?.message || 'Exam not found');
@@ -50,7 +48,6 @@ export const fetchExamResults = createAsyncThunk('exam/fetchExamResults', async 
   }
 });
 
-// CREATE / UPLOAD THUNKS
 export const createExam = createAsyncThunk('exam/createExam', async (data, { rejectWithValue }) => {
   try {
     const r = await axios.post(API_URL, data);
@@ -71,7 +68,6 @@ export const uploadExamPdf = createAsyncThunk('exam/uploadExamPdf', async (formD
 
 export const uploadExam = uploadExamPdf;
 
-// UPDATE / DELETE THUNKS
 export const updateExam = createAsyncThunk('exam/updateExam', async ({ id, examData }, { rejectWithValue }) => {
   try {
     const r = await axios.put(`${API_URL}/${id}`, examData);
@@ -135,7 +131,6 @@ export const removeResource = createAsyncThunk('exam/removeResource', async (id,
   }
 });
 
-// QUESTIONS THUNKS
 export const addQuestion = createAsyncThunk('exam/addQuestion', async ({ examId, questionData }, { rejectWithValue }) => {
   try {
     const r = await axios.post(`${API_URL}/${examId}/questions`, questionData);
@@ -197,7 +192,6 @@ const examSlice = createSlice({
         s.shareLink = a.payload?.shareLink || null; 
       })
      .addCase(fetchExamByCode.fulfilled, (s, a) => {
-        // ফ্লেক্সিবল ডাটা পার্সিং (a.payload.exam / a.payload.data / a.payload)
         const ex = a.payload?.exam || a.payload?.data || a.payload;
         s.currentExam = ex;
         s.questions = a.payload?.questions || ex?.questions || [];
