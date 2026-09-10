@@ -31,7 +31,7 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
   }
 });
 
-// EXAM CODE দিয়ে পরীক্ষা খোঁজার নতুন Async Thunk
+// EXAM CODE দিয়ে পরীক্ষা খোঁজার Async Thunk
 export const fetchExamByCode = createAsyncThunk('exam/fetchExamByCode', async (examCode, { rejectWithValue }) => {
   try {
     const r = await axios.get(`${API_URL}/code/${examCode}`);
@@ -185,13 +185,15 @@ const examSlice = createSlice({
     b.addCase(fetchExams.fulfilled, (s, a) => { s.exams = a.payload; })
      .addCase(fetchMyExams.fulfilled, (s, a) => { s.exams = a.payload; })
      .addCase(fetchExamById.fulfilled, (s, a) => { 
-        s.currentExam = a.payload.exam || a.payload; 
-        s.questions = a.payload.questions || a.payload.exam?.questions || []; 
+        const ex = a.payload.exam || a.payload.data || a.payload;
+        s.currentExam = ex; 
+        s.questions = a.payload.questions || ex?.questions || []; 
         s.shareLink = a.payload.shareLink || null; 
       })
      .addCase(fetchExamByCode.fulfilled, (s, a) => {
-        s.currentExam = a.payload.exam || a.payload;
-        s.questions = a.payload.questions || a.payload.exam?.questions || [];
+        const ex = a.payload.exam || a.payload.data || a.payload;
+        s.currentExam = ex;
+        s.questions = a.payload.questions || ex?.questions || [];
       })
      .addCase(fetchExamResults.fulfilled, (s, a) => { s.results = a.payload.results || a.payload; })
      .addCase(createExam.fulfilled, (s, a) => { s.exams.push(a.payload.exam || a.payload); })
