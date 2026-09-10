@@ -27,7 +27,7 @@ const StudentJoin = () => {
   useEffect(() => {
     if (user && user.role === 'student') {
       setStudentName(user.name || '');
-      setRollNumber(user.rollNumber || '');
+      setRollNumber(user.rollNumber || user.roll || '');
       setPhone(user.phone || '');
     }
   }, [user]);
@@ -35,14 +35,13 @@ const StudentJoin = () => {
   const handleStartExam = async (e) => {
     if (e) e.preventDefault();
 
-    // ব্যাকএন্ডে পাঠানোর জন্য আইডি বা কোড নিশ্চিত করা
     const targetExamId = 
       currentExam?._id || 
       currentExam?.id || 
       currentExam?.examId || 
       currentExam?.exam?._id ||
       currentExam?.examCode || 
-      code; // URL-এর কোডটি ফলব্যাক হিসেবে ব্যবহার করা হলো
+      code;
 
     if (!targetExamId) {
       alert('পরীক্ষার তথ্য পাওয়া যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন।');
@@ -50,7 +49,7 @@ const StudentJoin = () => {
     }
 
     const nameToUse = user ? user.name : studentName;
-    const rollToUse = user ? (user.rollNumber || 'N/A') : rollNumber;
+    const rollToUse = user ? (user.rollNumber || user.roll || user.studentRoll || '101') : rollNumber;
     const phoneToUse = user ? (user.phone || '') : phone;
 
     if (!nameToUse?.trim() || (!user && !rollToUse?.trim())) {
@@ -63,9 +62,10 @@ const StudentJoin = () => {
       const result = await dispatch(
         startAttempt({
           examId: targetExamId,
-          examCode: code, // ব্যাকএন্ড যদি examCode চায়
+          examCode: code,
           studentName: nameToUse,
           rollNumber: rollToUse,
+          studentRoll: rollToUse, // ব্যাকএন্ডের চাহিদা অনুযায়ী studentRoll যুক্ত করা হলো
           phone: phoneToUse,
           studentId: user ? user._id || user.id : null,
         })
@@ -105,7 +105,7 @@ const StudentJoin = () => {
           <div className="text-center space-y-4">
             <div className="bg-slate-700/50 p-4 rounded-lg text-left text-sm space-y-1 border border-slate-600">
               <p><span className="text-slate-400">পরীক্ষার্থী:</span> <strong className="text-white">{user.name}</strong></p>
-              {user.rollNumber && <p><span className="text-slate-400">রোল নম্বর:</span> <strong className="text-white">{user.rollNumber}</strong></p>}
+              <p><span className="text-slate-400">রোল নম্বর:</span> <strong className="text-white">{user.rollNumber || user.roll || 'N/A'}</strong></p>
               {user.email && <p><span className="text-slate-400">ইমেইল:</span> <strong className="text-white">{user.email}</strong></p>}
             </div>
 
@@ -135,7 +135,7 @@ const StudentJoin = () => {
               <input
                 type="text"
                 required
-                value= {rollNumber}
+                value={rollNumber}
                 onChange={(e) => setRollNumber(e.target.value)}
                 placeholder="উদাহরণ: 101"
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:border-indigo-500"
