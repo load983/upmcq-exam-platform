@@ -1,5 +1,4 @@
 // ================== controllers/attemptController.js ==================
-// স্টুডেন্ট সাইডের এক্সাম দেয়া, উত্তর দেয়া এবং সাবমিট করার লজিক
 const fs = require('fs');
 const path = require('path');
 const Exam = require('../models/Exam');
@@ -7,7 +6,6 @@ const Question = require('../models/Question');
 const Attempt = require('../models/Attempt');
 const PDFDocument = require('pdfkit');
 
-// লিস্ট এলোমেলো করার ছোট্ট হেল্পার (Fisher-Yates shuffle)
 function shuffleArray(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -17,7 +15,7 @@ function shuffleArray(arr) {
   return a;
 }
 
-// ---------- ১. Exam জয়েন করা (লগইন করা ইউজার অথবা ম্যানুয়াল ডাটা দিয়ে) ----------
+// ---------- ১. Exam জয়েন করা ----------
 exports.joinExam = async (req, res) => {
   try {
     const { examCode, studentName, studentRoll, studentPhone, accessCode, studentId } = req.body;
@@ -31,13 +29,11 @@ exports.joinExam = async (req, res) => {
 
     const allowRepetition = exam.settings?.allowRepetition;
 
-    // লগইন ইউজার আইডি অথবা রোল নম্বর দিয়ে ফিল্টার তৈরি
     const studentQuery = studentId 
       ? { exam: exam._id, studentId } 
       : { exam: exam._id, studentRoll };
 
     if (!allowRepetition) {
-      // আগে থেকেই Submit করা থাকলে আবার দেয়া যাবে না
       const existing = await Attempt.findOne(studentQuery);
       if (existing && existing.status === 'submitted') {
         return res.status(400).json({ message: 'তুমি ইতিমধ্যে এই পরীক্ষা জমা দিয়েছো' });
@@ -47,7 +43,6 @@ exports.joinExam = async (req, res) => {
         return res.json(buildStudentExamPayload(exam, existing, questions));
       }
     } else {
-      // Repetition অন থাকলে চলমান কোনো এটেম্পট থাকলে সেটা রিজিউম করাও
       const existingInProgress = await Attempt.findOne({ ...studentQuery, status: 'in-progress' });
       if (existingInProgress) {
         const questions = await Question.find({ _id: { $in: existingInProgress.questionOrder } });
@@ -57,7 +52,6 @@ exports.joinExam = async (req, res) => {
 
     let questions = await Question.find({ exam: exam._id }).sort({ order: 1 });
 
-    // Total Questions to use সেটিং অনুযায়ী কতগুলো প্রশ্ন নেয়া হবে
     const limit = exam.settings?.totalQuestionsToUse;
     if (limit && limit > 0 && limit < questions.length) {
       questions = shuffleArray(questions).slice(0, limit);
@@ -66,7 +60,6 @@ exports.joinExam = async (req, res) => {
       questions = shuffleArray(questions);
     }
 
-    // অপশন শাফল হলে প্রতিটা প্রশ্নের জন্য একটা ম্যাপিং সেভ রাখা হয়
     const optionOrderMap = {};
     if (exam.settings?.shuffleOptions) {
       questions.forEach((q) => {
@@ -77,7 +70,7 @@ exports.joinExam = async (req, res) => {
 
     const attempt = await Attempt.create({
       exam: exam._id,
-      studentId: studentId || null, // লগইন থাকা স্টুডেন্টের ID
+      studentId: studentId || null,
       studentName,
       studentRoll,
       studentPhone,
@@ -97,7 +90,7 @@ exports.joinExam = async (req, res) => {
   }
 };
 
-// স্টুডেন্টকে যা পাঠানো হবে তাতে সঠিক উত্তর কখনোই থাকবে না
+// নিরাপদ সময় রিটার্ন করার ফাংশন
 function buildStudentExamPayload(exam, attempt, questions) {
   const optionOrderMap = attempt.optionOrderMap || {};
   const safeQuestions = questions.map((q) => {
@@ -106,20 +99,19 @@ function buildStudentExamPayload(exam, attempt, questions) {
     return { _id: q._id, questionText: q.questionText, options };
   });
 
-  // সময় যেন ০ না আসে তার জন্য সেফগার্ড
-  const rawTime = exam.settings?.totalTimeMinutes;
-  const timeMinutes = rawTime && Number(rawTime) > 0 ? Number(rawTime) : 10;
+  // সময় ০ বা undefined হলে ডিফল্ট ১০ মিনিট দেখাবে
+  const timeLimit = Number(exam.settings?.totalTimeMinutes) || 10;
 
   return {
     attemptId: attempt._id,
     examTitle: exam.title,
-    totalTimeMinutes: timeMinutes,
+    totalTimeMinutes: timeLimit,
     startedAt: attempt.startedAt,
     questions: safeQuestions,
   };
 }
 
-// ---------- ২. একটা প্রশ্নের উত্তর সেভ করা (প্রতিবার ক্লিকেই অটো-সেভ) ----------
+// ---------- ২. উত্তর সেভ করা ----------
 exports.saveAnswer = async (req, res) => {
   try {
     const { attemptId } = req.params;
@@ -147,7 +139,7 @@ exports.saveAnswer = async (req, res) => {
   }
 };
 
-// ---------- ৩. Submit (ম্যানুয়াল বা অটো) ----------
+// ---------- ৩. Submit করা ----------
 exports.submitAttempt = async (req, res) => {
   try {
     const { attemptId } = req.params;
@@ -159,14 +151,13 @@ exports.submitAttempt = async (req, res) => {
     const exam = await Exam.findById(attempt.exam);
 
     if (attempt.status === 'submitted')
-      return res.json(await buildResultPayload(attempt, exam, exam.settings?.showResultInstantly));
+      return res.json(await buildResultPayload(attempt, exam, exam?.settings?.showResultInstantly));
 
     const questions = await Question.find({ _id: { $in: attempt.questionOrder } });
     const qMap = {};
     questions.forEach((q) => (qMap[q._id.toString()] = q));
 
-    let correct = 0,
-      wrong = 0;
+    let correct = 0, wrong = 0;
     const marksPerQ = exam.settings?.marksPerQuestion || 1;
     const negEnabled = exam.settings?.negativeMarking?.enabled || false;
     const negMarks = exam.settings?.negativeMarking?.marksPerWrong || 0;
@@ -184,7 +175,6 @@ exports.submitAttempt = async (req, res) => {
 
     const totalQ = attempt.questionOrder.length;
     const skipped = totalQ - correct - wrong;
-
     const obtainedMarks = correct * marksPerQ - (negEnabled ? wrong * negMarks : 0);
 
     attempt.totalCorrect = correct;
@@ -196,7 +186,7 @@ exports.submitAttempt = async (req, res) => {
     attempt.status = 'submitted';
     await attempt.save();
 
-    res.json(await buildResultPayload(attempt, exam, exam.settings?.showResultInstantly));
+    res.json(await buildResultPayload(attempt, exam, exam?.settings?.showResultInstantly));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -222,7 +212,7 @@ async function buildResultPayload(attempt, exam, showInstantly = true) {
   };
 }
 
-// ---------- ৪. Result + সঠিক উত্তর সহ PDF ডাউনলোড ----------
+// ---------- ৪. Result PDF ডাউনলোড ----------
 exports.downloadResultPdf = async (req, res) => {
   try {
     const attempt = await Attempt.findById(req.params.attemptId);
@@ -281,7 +271,7 @@ exports.downloadResultPdf = async (req, res) => {
   }
 };
 
-// ---------- ৫. শিক্ষকের দেয়া অতিরিক্ত রিসোর্স PDF ডাউনলোড (Result পেজ থেকে) ----------
+// ---------- ৫. অতিরিক্ত Resource PDF ডাউনলোড ----------
 exports.downloadResourcePdf = async (req, res) => {
   try {
     const attempt = await Attempt.findById(req.params.attemptId);
@@ -302,7 +292,7 @@ exports.downloadResourcePdf = async (req, res) => {
   }
 };
 
-// ---------- ৬. প্রশ্ন-ভিত্তিক বিস্তারিত রিভিউ (রেজাল্ট পেজে All/Correct/Wrong/Skipped ফিল্টারের জন্য) ----------
+// ---------- ৬. Review ডাটা ফেচ করা ----------
 exports.getAttemptReview = async (req, res) => {
   try {
     const attempt = await Attempt.findById(req.params.attemptId);
@@ -339,7 +329,7 @@ exports.getAttemptReview = async (req, res) => {
   }
 };
 
-// ---------- ৭. শিক্ষকের রেজাল্ট ড্যাশবোর্ডের জন্য পুরো পরীক্ষার রেজাল্ট ফেচ করা ----------
+// ---------- ৭. টিচারের জন্য রেজাল্ট লিস্ট ----------
 exports.getTeacherExamDashboardResults = async (req, res) => {
   try {
     const { examId } = req.params;
