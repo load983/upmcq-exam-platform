@@ -35,16 +35,18 @@ const StudentJoin = () => {
   const handleStartExam = async (e) => {
     if (e) e.preventDefault();
 
-    // সঠিকভাবে আইডি ক্যাচ করার জন্য ফাংশনের ভেতরেই ডিফাইন করা হলো
+    // ব্যাকএন্ড থেকে আসা ডেটার সব সম্ভাব্য প্রপার্টি চেক করা হচ্ছে
     const targetExamId = 
       currentExam?._id || 
       currentExam?.id || 
       currentExam?.examId || 
       currentExam?.exam?._id ||
-      currentExam?.exam?.id;
+      currentExam?.exam?.id ||
+      (typeof currentExam === 'string' ? currentExam : null);
 
     if (!targetExamId) {
-      alert('পরীক্ষার তথ্য পাওয়া যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন।');
+      // এটি আপনাকে বলে দেবে ব্রাউজারে ঠিক কী ডেটা আসছে
+      alert(`Debug Info: ${JSON.stringify(currentExam)}`);
       return;
     }
 
@@ -96,7 +98,7 @@ const StudentJoin = () => {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
-        <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || 'Exam'}</h1>
+        <h1 className="text-2xl font-bold text-center mb-2">{currentExam?.title || currentExam?.exam?.title || 'Exam'}</h1>
         <p className="text-center text-slate-400 mb-6">সময়: {examDuration} মিনিট</p>
 
         {user && user.role === 'student' ? (
@@ -109,7 +111,7 @@ const StudentJoin = () => {
 
             <button
               onClick={handleStartExam}
-              disabled={submitting || !currentExam}
+              disabled={submitting}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800/60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition cursor-pointer"
             >
               {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
@@ -151,7 +153,7 @@ const StudentJoin = () => {
             </div>
             <button
               type="submit"
-              disabled={submitting || !currentExam}
+              disabled={submitting}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800/60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition cursor-pointer"
             >
               {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
