@@ -15,7 +15,6 @@ export const fetchExams = createAsyncThunk('exam/fetchExams', async (_, { reject
 
 export const fetchMyExams = createAsyncThunk('exam/fetchMyExams', async (_, { rejectWithValue }) => {
   try {
-    // ব্যাকএন্ডে GET /api/exams (getMyExams) রুটই লগইন করা টিচারের নিজের এক্সাম লিস্ট দেয়
     const r = await axios.get(API_URL);
     return r.data;
   } catch (e) {
@@ -29,6 +28,16 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
     return r.data;
   } catch (e) {
     return rejectWithValue(e.response?.data?.message || 'Failed to fetch exam details');
+  }
+});
+
+// EXAM CODE দিয়ে পরীক্ষা খোঁজার নতুন Async Thunk
+export const fetchExamByCode = createAsyncThunk('exam/fetchExamByCode', async (examCode, { rejectWithValue }) => {
+  try {
+    const r = await axios.get(`${API_URL}/code/${examCode}`);
+    return r.data;
+  } catch (e) {
+    return rejectWithValue(e.response?.data?.message || 'Exam not found');
   }
 });
 
@@ -179,6 +188,10 @@ const examSlice = createSlice({
         s.currentExam = a.payload.exam || a.payload; 
         s.questions = a.payload.questions || a.payload.exam?.questions || []; 
         s.shareLink = a.payload.shareLink || null; 
+      })
+     .addCase(fetchExamByCode.fulfilled, (s, a) => {
+        s.currentExam = a.payload.exam || a.payload;
+        s.questions = a.payload.questions || a.payload.exam?.questions || [];
       })
      .addCase(fetchExamResults.fulfilled, (s, a) => { s.results = a.payload.results || a.payload; })
      .addCase(createExam.fulfilled, (s, a) => { s.exams.push(a.payload.exam || a.payload); })
