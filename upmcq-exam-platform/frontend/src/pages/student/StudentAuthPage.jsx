@@ -1,108 +1,117 @@
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import axiosClient from '../../api/axiosClient';
+import axiosClient from '../api/axiosClient';
 
-export default function StudentAuthPage() {
-  const [isRegister, setIsRegister] = useState(false);
+export default function StudentAuth() {
+  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ name: '', roll: '', phone: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const endpoint = isRegister ? '/auth/student/register' : '/auth/student/login';
+    setLoading(true);
 
     try {
-      const res = await axiosClient.post(endpoint, formData);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      const endpoint = isLogin ? '/auth/student/login' : '/auth/student/register';
+      const response = await axiosClient.post(endpoint, formData);
+      
+      // লোকাল স্টোরেজ ও রিডাক্স স্টেট আপডেট
+      localStorage.setItem('user', JSON.stringify(response.data));
+      dispatch({ type: 'auth/setCredentials', payload: response.data });
+
       navigate('/exams');
     } catch (err) {
-      setError(err.response?.data?.message || 'একটি সমস্যা দেখা দিয়েছে');
+      setError(err.response?.data?.message || 'সমস্যা হয়েছে, আবার চেষ্টা করুন');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">
-          {isRegister ? 'শিক্ষার্থী অ্যাকাউন্ট তৈরি করুন' : 'শিক্ষার্থী লগইন'}
-        </h2>
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-md border dark:border-gray-700">
+      <h2 className="text-2xl font-bold text-center mb-6 dark:text-white">
+        {isLogin ? 'শিক্ষার্থী লগইন' : 'নতুন অ্যাকাউন্ট তৈরি করুন'}
+      </h2>
 
-        {error && (
-          <div className="bg-red-100 text-red-600 p-3 rounded mb-4 text-sm text-center">
-            {error}
-          </div>
+      {error && <p className="text-red-500 text-sm mb-4 text-center">{error}</p>}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {!isLogin && (
+          <>
+            <div>
+              <label className="block text-sm font-medium dark:text-gray-200">নাম</label>
+              <input
+                type="text"
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full mt-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium dark:text-gray-200">রোল নাম্বার</label>
+              <input
+                type="text"
+                name="roll"
+                value={formData.roll}
+                onChange={handleChange}
+                className="w-full mt-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+            </div>
+          </>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <>
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-200">নাম</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                  placeholder="আপনার নাম লিখুন"
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-200">রোল নাম্বার</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                  placeholder="আপনার রোল লিখুন"
-                  onChange={(e) => setFormData({ ...formData, roll: e.target.value })}
-                />
-              </div>
-            </>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium mb-1 dark:text-gray-200">মোবাইল নাম্বার</label>
-            <input
-              type="text"
-              required
-              className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600"
-              placeholder="017xxxxxxxx"
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1 dark:text-gray-200">পাসওয়ার্ড</label>
-            <input
-              type="password"
-              required
-              className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600"
-              placeholder="******"
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
-          >
-            {isRegister ? 'অ্যাকাউন্ট তৈরি করুন' : 'লগইন করুন'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => setIsRegister(!isRegister)}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            {isRegister
-              ? 'আগে থেকেই অ্যাকাউন্ট আছে? লগইন করুন'
-              : 'নতুন অ্যাকাউন্ট তৈরি করতে চান? এখানে ক্লিক করুন'}
-          </button>
+        <div>
+          <label className="block text-sm font-medium dark:text-gray-200">মোবাইল নাম্বার</label>
+          <input
+            type="text"
+            name="phone"
+            required
+            value={formData.phone}
+            onChange={handleChange}
+            className="w-full mt-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium dark:text-gray-200">পাসওয়ার্ড</label>
+          <input
+            type="password"
+            name="password"
+            required
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full mt-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2 rounded-lg font-medium transition-colors"
+        >
+          {loading ? 'অপেক্ষা করুন...' : isLogin ? 'লগইন' : 'রেজিস্টার'}
+        </button>
+      </form>
+
+      <div className="mt-4 text-center">
+        <button
+          onClick={() => { setIsLogin(!isLogin); setError(''); }}
+          className="text-sm text-primary-600 dark:text-primary-400 underline"
+        >
+          {isLogin ? 'নতুন অ্যাকাউন্ট নেই? সাইন আপ করুন' : 'আগে থেকেই অ্যাকাউন্ট আছে? লগইন করুন'}
+        </button>
       </div>
     </div>
   );
