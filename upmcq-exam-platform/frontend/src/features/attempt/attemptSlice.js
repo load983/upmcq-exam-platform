@@ -12,6 +12,9 @@ export const joinExam = createAsyncThunk('attempt/join', async (payload, { rejec
   }
 });
 
+// StudentJoin.jsx ফাইলে startAttempt নামে ইমপোর্ট সামঞ্জস্য রাখার জন্য alias export
+export const startAttempt = joinExam;
+
 export const saveAnswer = createAsyncThunk(
   'attempt/saveAnswer',
   async ({ attemptId, questionId, selectedOptionIndex }, { rejectWithValue }) => {
