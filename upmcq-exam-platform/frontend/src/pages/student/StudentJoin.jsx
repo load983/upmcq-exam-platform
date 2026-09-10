@@ -15,6 +15,7 @@ const StudentJoin = () => {
   const [studentName, setStudentName] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [phone, setPhone] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (examCode) {
@@ -33,6 +34,11 @@ const StudentJoin = () => {
   const handleStartExam = async (e) => {
     if (e) e.preventDefault();
 
+    if (!currentExam?._id) {
+      alert('পরীক্ষার তথ্য পাওয়া যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন।');
+      return;
+    }
+
     const nameToUse = user ? user.name : studentName;
     const rollToUse = user ? (user.rollNumber || 'N/A') : rollNumber;
     const phoneToUse = user ? (user.phone || '') : phone;
@@ -43,6 +49,7 @@ const StudentJoin = () => {
     }
 
     try {
+      setSubmitting(true);
       const result = await dispatch(
         startAttempt({
           examId: currentExam._id,
@@ -53,9 +60,19 @@ const StudentJoin = () => {
         })
       ).unwrap();
 
-      navigate(`/student/exam/${result._id}`);
+      // backend data format অনুযায়ী attemptId বা _id নিরাপদভাবে গ্রহণ
+      const attemptId = result.attemptId || result._id || result.attempt?._id;
+      
+      if (attemptId) {
+        navigate(`/student/exam/${attemptId}`);
+      } else {
+        alert('পরীক্ষা শুরু করা সম্ভব হয়নি। আবার চেষ্টা করুন।');
+      }
     } catch (err) {
       console.error('Failed to start exam:', err);
+      alert(typeof err === 'string' ? err : 'পরীক্ষা শুরু করতে সমস্যা হয়েছে');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -78,9 +95,10 @@ const StudentJoin = () => {
 
             <button
               onClick={handleStartExam}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition"
+              disabled={submitting}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-medium py-2.5 rounded-lg transition"
             >
-              পরীক্ষা শুরু করো
+              {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
             </button>
           </div>
         ) : (
@@ -119,9 +137,10 @@ const StudentJoin = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition"
+              disabled={submitting}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-medium py-2.5 rounded-lg transition"
             >
-              পরীক্ষা শুরু করো
+              {submitting ? 'শুরু হচ্ছে...' : 'পরীক্ষা শুরু করো'}
             </button>
           </form>
         )}
