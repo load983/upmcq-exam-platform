@@ -31,6 +31,7 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
   }
 });
 
+// EXAM CODE দিয়ে পরীক্ষা খোঁজার Async Thunk
 export const fetchExamByCode = createAsyncThunk('exam/fetchExamByCode', async (examCode, { rejectWithValue }) => {
   try {
     const r = await axios.get(`${API_URL}/code/${examCode}`);
@@ -190,31 +191,32 @@ const examSlice = createSlice({
     b.addCase(fetchExams.fulfilled, (s, a) => { s.exams = Array.isArray(a.payload) ? a.payload : a.payload.exams || []; })
      .addCase(fetchMyExams.fulfilled, (s, a) => { s.exams = Array.isArray(a.payload) ? a.payload : a.payload.exams || []; })
      .addCase(fetchExamById.fulfilled, (s, a) => { 
-        const ex = a.payload.exam || a.payload.data || a.payload;
+        const ex = a.payload?.exam || a.payload?.data || a.payload;
         s.currentExam = ex; 
-        s.questions = a.payload.questions || ex?.questions || []; 
-        s.shareLink = a.payload.shareLink || null; 
+        s.questions = a.payload?.questions || ex?.questions || []; 
+        s.shareLink = a.payload?.shareLink || null; 
       })
      .addCase(fetchExamByCode.fulfilled, (s, a) => {
-        const ex = a.payload.exam || a.payload.data || a.payload;
+        // ফ্লেক্সিবল ডাটা পার্সিং (a.payload.exam / a.payload.data / a.payload)
+        const ex = a.payload?.exam || a.payload?.data || a.payload;
         s.currentExam = ex;
-        s.questions = a.payload.questions || ex?.questions || [];
+        s.questions = a.payload?.questions || ex?.questions || [];
       })
      .addCase(fetchExamResults.fulfilled, (s, a) => { s.results = a.payload.results || a.payload; })
      .addCase(createExam.fulfilled, (s, a) => { 
         const ex = a.payload.exam || a.payload;
-        if (ex?._id) s.exams.push(ex);
+        if (ex?._id || ex?.id) s.exams.push(ex);
       })
      .addCase(uploadExamPdf.fulfilled, (s, a) => { 
         const ex = a.payload.exam || a.payload; 
-        if (ex?._id) s.exams.push(ex); 
+        if (ex?._id || ex?.id) s.exams.push(ex); 
       })
      .addCase(updateExamSettings.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
      .addCase(publishExam.fulfilled, (s, a) => { 
         s.currentExam = a.payload.exam || a.payload; 
         s.shareLink = a.payload.shareLink || a.payload.link || s.shareLink; 
       })
-     .addCase(deleteExam.fulfilled, (s, a) => { s.exams = s.exams.filter(e => e._id !== a.payload); })
+     .addCase(deleteExam.fulfilled, (s, a) => { s.exams = s.exams.filter(e => (e._id || e.id) !== a.payload); })
      .addCase(setResourceLink.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
      .addCase(uploadResourcePdf.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
      .addCase(removeResource.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
@@ -224,10 +226,10 @@ const examSlice = createSlice({
       })
      .addCase(updateQuestion.fulfilled, (s, a) => { 
         const q = a.payload.question || a.payload;
-        const i = s.questions.findIndex(item => item._id === q._id); 
+        const i = s.questions.findIndex(item => (item._id || item.id) === (q._id || q.id)); 
         if (i !== -1) s.questions[i] = q; 
       })
-     .addCase(deleteQuestion.fulfilled, (s, a) => { s.questions = s.questions.filter(q => q._id !== a.payload); })
+     .addCase(deleteQuestion.fulfilled, (s, a) => { s.questions = s.questions.filter(q => (q._id || q.id) !== a.payload); })
      .addMatcher(ac => ac.type.endsWith('/pending'), s => { s.loading = true; s.error = null; })
      .addMatcher(ac => ac.type.endsWith('/rejected'), (s, ac) => { s.loading = false; s.error = ac.payload; })
      .addMatcher(ac => ac.type.endsWith('/fulfilled'), s => { s.loading = false; });
