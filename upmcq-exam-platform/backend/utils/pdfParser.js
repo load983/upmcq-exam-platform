@@ -26,7 +26,7 @@ async function extractQuestionsFromPdf(pdfSource) {
   } else if (typeof pdfSource === 'string') {
     dataBuffer = fs.readFileSync(pdfSource);
   } else {
-    throw new Error('অবৈধ PDF সোর্স দেওয়া হয়েছে');
+    throw new Error('অবৈধ PDF সোর্স দেওয়া হয়েছে');
   }
 
   const pdfData = await pdfParse(dataBuffer);
@@ -156,7 +156,7 @@ function parseDetailedFormat(rawText) {
   return questions.map((q, idx) => ({ ...q, order: idx }));
 }
 
-// ---------- ২. Simple Format ----------
+// ---------- ২. Simple Format (ফিক্স করা হয়েছে: একই লাইনে একাধিক অপশন থাকলেও আলাদা করে ধরবে) ----------
 function parseSimpleFormat(rawText) {
   const lines = rawText
     .split(/\r?\n/)
@@ -167,21 +167,26 @@ function parseSimpleFormat(rawText) {
   let current = null;
 
   const questionStartRegex = /^(\d+)[\.\)]\s*(.+)/;
-  const optionRegex = /^([A-Da-d])[\.\)]\s*(.+)/;
   const answerRegex = /^(Answer|উত্তর)\s*[:\-]\s*([A-Da-d])/i;
+  // একই লাইনে একাধিক অপশন (A. ... B. ...) থাকলেও আলাদা করে ধরার জন্য
+  const inlineOptionsRegex = /([A-Da-d])[\.\)]\s*([^]*?)(?=\s*[A-Da-d][\.\)]\s*\S|$)/g;
 
   for (const line of lines) {
     const qMatch = line.match(questionStartRegex);
-    const oMatch = line.match(optionRegex);
     const aMatch = line.match(answerRegex);
 
-    if (qMatch && !oMatch) {
+    const optionMatches = [...line.matchAll(inlineOptionsRegex)]
+      .map((m) => cleanText(m[2]))
+      .filter((t) => t.length > 0);
+    const looksLikeOptions = /^[A-Da-d][\.\)]/.test(line) && optionMatches.length > 0;
+
+    if (qMatch && !looksLikeOptions) {
       if (current && current.options.length >= 2 && current.correctOptionIndex !== null) {
         questions.push(current);
       }
       current = { questionText: cleanText(qMatch[2]), options: [], correctOptionIndex: null };
-    } else if (oMatch && current) {
-      current.options.push(cleanText(oMatch[2]));
+    } else if (looksLikeOptions && current) {
+      current.options.push(...optionMatches);
     } else if (aMatch && current) {
       const letter = aMatch[2].toUpperCase();
       current.correctOptionIndex = letter.charCodeAt(0) - 'A'.charCodeAt(0);
@@ -269,7 +274,7 @@ function parseTableFormat(rawText) {
   return questions.map((q, idx) => ({ ...q, order: idx }));
 }
 
-// ৪. মডিউল এক্সপোর্ট (অবশ্যই নাম মিলিয়ে এক্সপোর্ট করা হয়েছে)
+// ৪. মডিউল এক্সপোর্ট (অবশ্যই নাম মিলিয়ে এক্সপোর্ট করা হয়েছে)
 module.exports = {
   extractQuestionsFromPdf,
   parseMcqText,
