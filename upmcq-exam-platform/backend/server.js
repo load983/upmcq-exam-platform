@@ -24,12 +24,30 @@ if (!fs.existsSync(uploadDir)) {
 // ডাটাবেসের সাথে কানেক্ট হও
 connectDB();
 
-// মিডলওয়্যার
-app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
+// CORS কনফিগারেশন (credentials: true থাকলে specific origin প্রয়োজন)
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'https://upmcq-exam-platform.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Postman বা Server-to-Server রিকোয়েস্টে origin না থাকলে allow করবে
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS Not Allowed'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json({ limit: '10mb' })); // JSON বডি পার্স করার জন্য
 app.use(express.urlencoded({ extended: true }));
 
-// আপলোড করা ফাইল (PDF) স্ট্যাটিকভাবে সার্ভ করার জন্য (প্রয়োজনে)
+// আপলোড করা ফাইল (PDF) স্ট্যাটিকভাবে সার্ভ করার জন্য
 app.use('/uploads', express.static(uploadDir));
 
 // রাউট গুলো মাউন্ট করা হলো
