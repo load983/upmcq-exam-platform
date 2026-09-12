@@ -62,10 +62,13 @@ const authSlice = createSlice({
   extraReducers: (builder) => {
     const onSuccess = (state, action) => {
       state.status = 'succeeded';
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      localStorage.setItem('token', action.payload.token);
-      localStorage.setItem('user', JSON.stringify(action.payload.user));
+      // ব্যাকএন্ড রেসপন্স ফ্ল্যাট অবজেক্ট হিসেবে আসে ({ _id, name, email, role, token }),
+      // এখানে আলাদা 'user' নামে কোনো ফিল্ড থাকে না — তাই token বাদ দিয়ে বাকি সব ফিল্ড দিয়ে user বানানো হচ্ছে
+      const { token, ...user } = action.payload;
+      state.user = user;
+      state.token = token;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
     };
     const onPending = (state) => {
       state.status = 'loading';
