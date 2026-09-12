@@ -3,8 +3,23 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosClient from '../../api/axiosClient';
 
-const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
-const savedToken = localStorage.getItem('token');
+// LocalStorage থেকে নিরাপদভাবে ডেটা পার্স করার হেলপার ফাংশন
+const getInitialUser = () => {
+  try {
+    const rawUser = localStorage.getItem('user');
+    if (!rawUser || rawUser === 'undefined') return null;
+    return JSON.parse(rawUser);
+  } catch (error) {
+    console.error('LocalStorage parsing error:', error);
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
+const savedUser = getInitialUser();
+const savedToken = localStorage.getItem('token') && localStorage.getItem('token') !== 'undefined'
+  ? localStorage.getItem('token')
+  : null;
 
 export const teacherLogin = createAsyncThunk('auth/teacherLogin', async (payload, { rejectWithValue }) => {
   try {
