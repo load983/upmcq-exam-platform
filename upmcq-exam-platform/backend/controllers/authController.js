@@ -4,9 +4,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { generateStudentsExcel } = require('../utils/excelExport');
 
-// JWT টোকেন জেনারেট করার হেল্পার ফাংশন
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'secretkey', {
+// JWT টোকেন জেনারেট করার হেল্পার ফাংশন (role-ও টোকেনে ঢোকানো হচ্ছে, নাহলে authorize() মিডলওয়্যার কাজ করে না)
+const generateToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'secretkey', {
     expiresIn: '30d',
   });
 };
@@ -18,7 +18,7 @@ exports.registerTeacher = async (req, res) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'এই ইমেইল দিয়ে ইতঃপূর্বে অ্যাকাউন্ট খোলা হয়েছে' });
+      return res.status(400).json({ message: 'এই ইমেইল দিয়ে ইতঃপূর্বে অ্যাকাউন্ট খোলা হয়েছে' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -36,10 +36,10 @@ exports.registerTeacher = async (req, res) => {
       name: teacher.name,
       email: teacher.email,
       role: teacher.role,
-      token: generateToken(teacher._id),
+      token: generateToken(teacher._id, teacher.role),
     });
   } catch (err) {
-    res.status(500).json({ message: 'সার্ভার এরর, নিবন্ধনে সমস্যা হয়েছে' });
+    res.status(500).json({ message: 'সার্ভার এরর, নিবন্ধনে সমস্যা হয়েছে' });
   }
 };
 
@@ -50,12 +50,12 @@ exports.loginTeacher = async (req, res) => {
 
     const teacher = await User.findOne({ email, role: 'teacher' });
     if (!teacher) {
-      return res.status(401).json({ message: 'ভুল ইমেইল বা পাসওয়ার্ড' });
+      return res.status(401).json({ message: 'ভুল ইমেইল বা পাসওয়ার্ড' });
     }
 
     const isMatch = await bcrypt.compare(password, teacher.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'ভুল ইমেইল বা পাসওয়ার্ড' });
+      return res.status(401).json({ message: 'ভুল ইমেইল বা পাসওয়ার্ড' });
     }
 
     res.json({
@@ -63,10 +63,10 @@ exports.loginTeacher = async (req, res) => {
       name: teacher.name,
       email: teacher.email,
       role: teacher.role,
-      token: generateToken(teacher._id),
+      token: generateToken(teacher._id, teacher.role),
     });
   } catch (err) {
-    res.status(500).json({ message: 'সার্ভার এরর, লগইনে সমস্যা হয়েছে' });
+    res.status(500).json({ message: 'সার্ভার এরর, লগইনে সমস্যা হয়েছে' });
   }
 };
 
@@ -78,7 +78,7 @@ exports.registerStudent = async (req, res) => {
     if (phone) {
       const existingStudent = await User.findOne({ phone, role: 'student' });
       if (existingStudent) {
-        return res.status(400).json({ message: 'এই মোবাইল নাম্বার দিয়ে ইতঃপূর্বে রেজিস্ট্রেশন করা হয়েছে' });
+        return res.status(400).json({ message: 'এই মোবাইল নাম্বার দিয়ে ইতঃপূর্বে রেজিস্ট্রেশন করা হয়েছে' });
       }
     }
 
@@ -102,10 +102,10 @@ exports.registerStudent = async (req, res) => {
       roll: student.roll,
       phone: student.phone,
       role: student.role,
-      token: generateToken(student._id),
+      token: generateToken(student._id, student.role),
     });
   } catch (err) {
-    res.status(500).json({ message: 'স্টুডেন্ট রেজিস্টার করতে সমস্যা হয়েছে' });
+    res.status(500).json({ message: 'স্টুডেন্ট রেজিস্টার করতে সমস্যা হয়েছে' });
   }
 };
 
@@ -116,13 +116,13 @@ exports.loginStudent = async (req, res) => {
 
     const student = await User.findOne({ phone, role: 'student' });
     if (!student) {
-      return res.status(401).json({ message: 'এই নম্বর দিয়ে কোনো স্টুডেন্ট অ্যাকাউন্ট পাওয়া যায়নি' });
+      return res.status(401).json({ message: 'এই নম্বর দিয়ে কোনো স্টুডেন্ট অ্যাকাউন্ট পাওয়া যায়নি' });
     }
 
     if (student.password) {
       const isMatch = await bcrypt.compare(password, student.password);
       if (!isMatch) {
-        return res.status(401).json({ message: 'ভুল পাসওয়ার্ড' });
+        return res.status(401).json({ message: 'ভুল পাসওয়ার্ড' });
       }
     }
 
@@ -132,10 +132,10 @@ exports.loginStudent = async (req, res) => {
       roll: student.roll,
       phone: student.phone,
       role: student.role,
-      token: generateToken(student._id),
+      token: generateToken(student._id, student.role),
     });
   } catch (err) {
-    res.status(500).json({ message: 'সার্ভার এরর, লগইনে সমস্যা হয়েছে' });
+    res.status(500).json({ message: 'সার্ভার এরর, লগইনে সমস্যা হয়েছে' });
   }
 };
 
@@ -164,10 +164,10 @@ exports.studentQuickLogin = async (req, res) => {
       roll: student.roll,
       phone: student.phone,
       role: student.role,
-      token: generateToken(student._id),
+      token: generateToken(student._id, student.role),
     });
   } catch (err) {
-    res.status(500).json({ message: 'কুইক লগইনে সমস্যা হয়েছে' });
+    res.status(500).json({ message: 'কুইক লগইনে সমস্যা হয়েছে' });
   }
 };
 
@@ -193,6 +193,6 @@ exports.exportStudentsExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.status(200).end();
   } catch (err) {
-    res.status(500).json({ message: 'এক্সেল ফাইল এক্সপোর্ট করতে সমস্যা হয়েছে' });
+    res.status(500).json({ message: 'এক্সেল ফাইল এক্সপোর্ট করতে সমস্যা হয়েছে' });
   }
 };
