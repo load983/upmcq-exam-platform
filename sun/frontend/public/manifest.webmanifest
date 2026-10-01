@@ -1,0 +1,36 @@
+{
+  "name": "Live MCQ Exam Platform",
+  "short_name": "MCQ Exam",
+  "description": "Live MCQ পরীক্ষা — দাও, তৈরি করো, রেজাল্ট দেখো",
+  "lang": "bn",
+  "start_url": "/exams",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Exams",
+      "url": "/exams"
+    },
+    {
+      "name": "Teacher dashboard",
+      "url": "/teacher/dashboard"
+    }
+  ]
+}
