@@ -387,6 +387,7 @@ export const extraEntries = {
   'a.u.connected': { bn: 'যুক্ত শিক্ষক ও শ্রেণী', en: 'Connected teachers & classes' },
   'a.u.noTeachers': { bn: 'কোনো শিক্ষকের সাথে যুক্ত নয়', en: 'Not connected to any teacher' },
   'a.u.pickClass': { bn: 'শিক্ষক — শ্রেণী বেছে নিন', en: 'Pick teacher — class' },
+  'a.u.classSearch': { bn: 'শিক্ষক বা শ্রেণী খুঁজুন', en: 'Search teacher or class' },
   'a.u.assign': { bn: 'যুক্ত করো', en: 'Assign' },
   'a.u.none': { bn: 'কেউ নেই', en: 'Nobody found' },
 

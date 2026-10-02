@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axiosClient from '../../api/axiosClient';
 import { useLanguage } from '../../context/LanguageContext';
 import { useDialog } from './adminUi';
+import SearchableSelect from '../../components/SearchableSelect';
 
 export default function AdminUsers({ say }) {
   const { t, locale } = useLanguage();
@@ -228,12 +229,17 @@ export default function AdminUsers({ say }) {
                       ))}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <select className="input max-w-xs" value={pickClass[u._id] || ''} onChange={(e) => setPickClass((m) => ({ ...m, [u._id]: e.target.value }))}>
-                        <option value="">{t('a.u.pickClass')}</option>
-                        {allClasses
+                      <SearchableSelect
+                        className="w-full max-w-xs"
+                        value={pickClass[u._id] || ''}
+                        onChange={(v) => setPickClass((m) => ({ ...m, [u._id]: v }))}
+                        placeholder={t('a.u.pickClass')}
+                        searchPlaceholder={t('a.u.classSearch')}
+                        emptyText={t('a.u.none')}
+                        options={allClasses
                           .filter((c) => !u.classes.some((x) => String(x._id) === String(c._id)))
-                          .map((c) => <option key={c._id} value={c._id}>{c.teacher.name} — {c.name}</option>)}
-                      </select>
+                          .map((c) => ({ value: c._id, label: `${c.teacher.name} — ${c.name}` }))}
+                      />
                       <button className="btn-primary !px-3 !py-1 text-xs" onClick={() => addClass(u)}>{t('a.u.assign')}</button>
                     </div>
                   </div>
